@@ -105,7 +105,48 @@ public class UserSelectionView extends JFrame {
                 user.getUsername(),
                 false
             );
-            userCard.addActionListener(e -> handleUserSelection(user));
+            userCard.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseClicked(MouseEvent e) {
+                    if (e.getButton() == MouseEvent.BUTTON1) {
+                        // Left click - Login
+                        if (listener != null) {
+                            listener.onUserSelected(user.getUsername());
+                        }
+                        dispose();
+                    } else if (e.getButton() == MouseEvent.BUTTON3) {
+                        // Right click - Manage Profile
+                        // Show password verification dialog
+                        JPasswordField passwordField = new JPasswordField();
+                        int result = JOptionPane.showConfirmDialog(UserSelectionView.this,
+                            passwordField,
+                            "Enter password to manage profile",
+                            JOptionPane.OK_CANCEL_OPTION,
+                            JOptionPane.PLAIN_MESSAGE);
+
+                        if (result == JOptionPane.OK_OPTION) {
+                            String password = new String(passwordField.getPassword());
+                            // Verify password
+                            if (UserController.authenticateUser(user.getUsername(), password)) {
+                                // Open user management view
+                                UserManagementView managementView = new UserManagementView(user);
+                                managementView.addWindowListener(new WindowAdapter() {
+                                    @Override
+                                    public void windowClosed(WindowEvent e) {
+                                        refreshUsers();
+                                    }
+                                });
+                                managementView.setVisible(true);
+                            } else {
+                                JOptionPane.showMessageDialog(UserSelectionView.this,
+                                    "Incorrect password",
+                                    "Error",
+                                    JOptionPane.ERROR_MESSAGE);
+                            }
+                        }
+                    }
+                }
+            });
             usersGrid.add(userCard);
         }
 
@@ -190,13 +231,6 @@ public class UserSelectionView extends JFrame {
         int hash = seed.hashCode();
         float hue = (hash & 0xFF) / 255.0f;
         return Color.getHSBColor(hue, 0.7f, 0.9f);
-    }
-
-    private void handleUserSelection(User user) {
-        if (listener != null) {
-            listener.onUserSelected(user.getUsername());
-        }
-        dispose();
     }
 
     public static void main(String[] args) {
