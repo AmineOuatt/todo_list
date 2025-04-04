@@ -100,17 +100,34 @@ public class TaskFrame extends JFrame {
         panel.setBackground(CARD_COLOR);
         panel.setBorder(new EmptyBorder(15, 15, 15, 15));
 
+        // Create a left panel for title
         JLabel titleLabel = new JLabel("Tasks");
         titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
         titleLabel.setForeground(TEXT_COLOR);
         panel.add(titleLabel, BorderLayout.WEST);
 
+        // Create a right panel for buttons
+        JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        rightPanel.setBackground(CARD_COLOR);
+
+        // Add button
         addButton = new JButton("+");
         styleButton(addButton, true);
         addButton.setFont(new Font("Segoe UI", Font.BOLD, 18));
         addButton.setPreferredSize(new Dimension(40, 40));
         addButton.addActionListener(e -> handleAddTask());
-        panel.add(addButton, BorderLayout.EAST);
+
+        // Logout button
+        JButton logoutButton = new JButton("Logout");
+        styleButton(logoutButton, false);
+        logoutButton.addActionListener(e -> {
+            dispose();
+            new UserSelectionView(username -> new LoginView(username).setVisible(true)).setVisible(true);
+        });
+
+        rightPanel.add(logoutButton);
+        rightPanel.add(addButton);
+        panel.add(rightPanel, BorderLayout.EAST);
 
         return panel;
     }

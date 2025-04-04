@@ -2,6 +2,8 @@ package View;
 
 import Controller.UserController;
 import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 
@@ -87,32 +89,34 @@ public class CreateUserView extends JFrame {
         formPanel.add(passwordField);
         formPanel.add(Box.createVerticalStrut(20));
 
-        // Create Account Button
+        // Buttons Panel
+        JPanel buttonsPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 0));
+        buttonsPanel.setBackground(CARD_COLOR);
+
+        // Back button
+        backButton = new JButton("Back");
+        styleButton(backButton, false);
+        backButton.addActionListener(e -> {
+            dispose();
+            new UserSelectionView(username -> new LoginView(username).setVisible(true)).setVisible(true);
+        });
+
+        // Create button
         createButton = new JButton("Create Account");
         styleButton(createButton, true);
-        createButton.setAlignmentX(Component.CENTER_ALIGNMENT);
-        formPanel.add(createButton);
-        formPanel.add(Box.createVerticalStrut(10));
+        createButton.addActionListener(e -> handleCreateUser());
 
-        // Back Button
-        backButton = new JButton("Back to Login");
-        styleButton(backButton, false);
-        backButton.setAlignmentX(Component.CENTER_ALIGNMENT);
-        formPanel.add(backButton);
+        buttonsPanel.add(backButton);
+        buttonsPanel.add(createButton);
+        formPanel.add(buttonsPanel);
 
         mainPanel.add(formPanel);
-
-        // Add action listeners
-        createButton.addActionListener(e -> handleCreateAccount());
-        backButton.addActionListener(e -> dispose());
-        passwordField.addActionListener(e -> handleCreateAccount());
-
         add(mainPanel);
     }
 
     private void styleTextField(JTextField field) {
         field.setPreferredSize(new Dimension(300, 35));
-        field.setMaximumSize(new Dimension(300, 35));
+        field.setMaximumSize(new Dimension(2000, 35));
         field.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         field.setBackground(Color.WHITE);
         field.setForeground(TEXT_COLOR);
@@ -124,32 +128,30 @@ public class CreateUserView extends JFrame {
 
     private void styleButton(JButton button, boolean isPrimary) {
         button.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        button.setPreferredSize(new Dimension(300, 40));
-        button.setMaximumSize(new Dimension(300, 40));
         button.setBackground(isPrimary ? PRIMARY_COLOR : Color.WHITE);
         button.setForeground(isPrimary ? Color.WHITE : PRIMARY_COLOR);
         button.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(isPrimary ? PRIMARY_COLOR : BORDER_COLOR),
-            BorderFactory.createEmptyBorder(5, 15, 5, 15)
+            BorderFactory.createEmptyBorder(8, 20, 8, 20)
         ));
         button.setFocusPainted(false);
         button.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
-        button.addMouseListener(new java.awt.event.MouseAdapter() {
-            public void mouseEntered(java.awt.event.MouseEvent evt) {
+        button.addMouseListener(new MouseAdapter() {
+            public void mouseEntered(MouseEvent evt) {
                 if (isPrimary) {
                     button.setBackground(new Color(0, 99, 177));
                 } else {
                     button.setBackground(HOVER_COLOR);
                 }
             }
-            public void mouseExited(java.awt.event.MouseEvent evt) {
+            public void mouseExited(MouseEvent evt) {
                 button.setBackground(isPrimary ? PRIMARY_COLOR : Color.WHITE);
             }
         });
     }
 
-    private void handleCreateAccount() {
+    private void handleCreateUser() {
         String username = usernameField.getText().trim();
         String password = new String(passwordField.getPassword());
 
@@ -162,14 +164,11 @@ public class CreateUserView extends JFrame {
         }
 
         if (UserController.createUser(username, password)) {
-            JOptionPane.showMessageDialog(this,
-                "Account created successfully!",
-                "Success",
-                JOptionPane.INFORMATION_MESSAGE);
             dispose();
+            new LoginView(username).setVisible(true);
         } else {
             JOptionPane.showMessageDialog(this,
-                "Failed to create account. Username might already exist.",
+                "Failed to create user. Username may already exist.",
                 "Error",
                 JOptionPane.ERROR_MESSAGE);
         }

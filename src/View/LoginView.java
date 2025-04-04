@@ -99,19 +99,49 @@ public class LoginView extends JFrame {
         loginPanel.add(passwordField);
         loginPanel.add(Box.createVerticalStrut(20));
 
+        // Buttons Panel
+        JPanel buttonsPanel = new JPanel();
+        buttonsPanel.setLayout(new BoxLayout(buttonsPanel, BoxLayout.Y_AXIS));
+        buttonsPanel.setBackground(CARD_COLOR);
+
         // Login Button
         loginButton = new JButton("Sign In");
         styleButton(loginButton, true);
         loginButton.setAlignmentX(Component.CENTER_ALIGNMENT);
-        loginPanel.add(loginButton);
-        loginPanel.add(Box.createVerticalStrut(10));
+        buttonsPanel.add(loginButton);
+        buttonsPanel.add(Box.createVerticalStrut(10));
+
+        // Manage User Button
+        JButton manageButton = new JButton("Manage User");
+        styleButton(manageButton, false);
+        manageButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+        manageButton.addActionListener(e -> {
+            User selectedUser = (User) userDropdown.getSelectedItem();
+            if (selectedUser != null) {
+                new UserManagementView(selectedUser).setVisible(true);
+            }
+        });
+        buttonsPanel.add(manageButton);
+        buttonsPanel.add(Box.createVerticalStrut(10));
 
         // Create Account Button
         createUserButton = new JButton("Create New Account");
         styleButton(createUserButton, false);
         createUserButton.setAlignmentX(Component.CENTER_ALIGNMENT);
-        loginPanel.add(createUserButton);
+        buttonsPanel.add(createUserButton);
+        buttonsPanel.add(Box.createVerticalStrut(10));
 
+        // Back Button
+        JButton backButton = new JButton("Back");
+        styleButton(backButton, false);
+        backButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+        backButton.addActionListener(e -> {
+            dispose();
+            new UserSelectionView(username -> new LoginView(username).setVisible(true)).setVisible(true);
+        });
+        buttonsPanel.add(backButton);
+
+        loginPanel.add(buttonsPanel);
         mainPanel.add(loginPanel);
 
         // Create User Panel (initially hidden)
@@ -122,8 +152,17 @@ public class LoginView extends JFrame {
 
         // Add action listeners
         loginButton.addActionListener(e -> handleLogin());
-        createUserButton.addActionListener(e -> toggleCreateUserPanel());
+        createUserButton.addActionListener(e -> {
+            dispose();
+            new CreateUserView().setVisible(true);
+        });
         passwordField.addActionListener(e -> handleLogin());
+
+        // Update manage button state when user selection changes
+        userDropdown.addActionListener(e -> {
+            User selectedUser = (User) userDropdown.getSelectedItem();
+            manageButton.setEnabled(selectedUser != null);
+        });
 
         add(mainPanel);
     }
