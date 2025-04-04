@@ -8,7 +8,7 @@ public class DatabaseConnection {
     // Database credentials
     private static final String URL = "jdbc:mysql://localhost:3306/poo_pr"; // Change to your database name
     private static final String USER = "root";  // Change if needed
-    private static final String PASSWORD = "@Mine0903";  // Change if needed
+    private static final String PASSWORD = "";  // Change if needed
 
     // Method to establish connection
     public static Connection getConnection() {

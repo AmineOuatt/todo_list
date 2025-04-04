@@ -4,214 +4,174 @@ import Controller.UserController;
 import java.awt.*;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
-import javax.swing.border.LineBorder;
 
 public class CreateUserView extends JFrame {
     private JTextField usernameField;
     private JPasswordField passwordField;
     private JButton createButton, backButton;
-    private static final Color BUTTON_COLOR = new Color(70, 70, 70);
-    private static final Color BACKGROUND_COLOR = new Color(50, 50, 50);
-    private static final Color HOVER_COLOR = new Color(80, 80, 80);
-    private static final Color CARD_BACKGROUND = new Color(60, 60, 60);
+
+    // Modern Microsoft-style colors
+    private static final Color PRIMARY_COLOR = new Color(42, 120, 255);    // Microsoft Blue
+    private static final Color BACKGROUND_COLOR = new Color(243, 243, 243); // Light Gray
+    private static final Color CARD_COLOR = Color.WHITE;
+    private static final Color TEXT_COLOR = new Color(33, 33, 33);
+    private static final Color BORDER_COLOR = new Color(225, 225, 225);
+    private static final Color HOVER_COLOR = new Color(230, 240, 255);
 
     public CreateUserView() {
-        setTitle("To-Do List App");
-        setSize(450, 500);
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setBackground(BACKGROUND_COLOR);
-        
-        // Main panel with padding
+        setTitle("Create Account");
+        setSize(400, 600);
+        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        setLocationRelativeTo(null);
+        getContentPane().setBackground(BACKGROUND_COLOR);
+
+        // Main panel
         JPanel mainPanel = new JPanel();
         mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.Y_AXIS));
         mainPanel.setBackground(BACKGROUND_COLOR);
         mainPanel.setBorder(new EmptyBorder(40, 40, 40, 40));
 
-        // Top panel with back button and title
-        JPanel topPanel = new JPanel(new BorderLayout());
-        topPanel.setBackground(BACKGROUND_COLOR);
-        
-        backButton = new JButton("← Back");
-        styleBackButton(backButton);
-        backButton.addActionListener(e -> dispose());
-        topPanel.add(backButton, BorderLayout.WEST);
-
-        JLabel titleLabel = new JLabel("Create Account");
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 32));
-        titleLabel.setForeground(Color.WHITE);
-        titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-        topPanel.add(titleLabel, BorderLayout.CENTER);
-
-        mainPanel.add(topPanel);
+        // Logo and Title
+        JLabel logoLabel = new JLabel("✓", SwingConstants.CENTER);
+        logoLabel.setFont(new Font("Segoe UI", Font.BOLD, 48));
+        logoLabel.setForeground(PRIMARY_COLOR);
+        logoLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        mainPanel.add(logoLabel);
         mainPanel.add(Box.createVerticalStrut(20));
 
-        // Subtitle
-        JLabel subtitleLabel = new JLabel("Please fill in your details");
-        subtitleLabel.setFont(new Font("Arial", Font.PLAIN, 16));
-        subtitleLabel.setForeground(Color.WHITE);
+        JLabel titleLabel = new JLabel("Create Account", SwingConstants.CENTER);
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 24));
+        titleLabel.setForeground(TEXT_COLOR);
+        titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        mainPanel.add(titleLabel);
+        mainPanel.add(Box.createVerticalStrut(10));
+
+        JLabel subtitleLabel = new JLabel("Enter your details below", SwingConstants.CENTER);
+        subtitleLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        subtitleLabel.setForeground(new Color(117, 117, 117));
         subtitleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         mainPanel.add(subtitleLabel);
-        mainPanel.add(Box.createVerticalStrut(40));
+        mainPanel.add(Box.createVerticalStrut(30));
 
-        // Create account card
-        JPanel createCard = new JPanel() {
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(getBackground());
-                g2.fillRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 20, 20);
-                super.paintComponent(g);
-                g2.dispose();
-            }
-        };
-        createCard.setLayout(new BoxLayout(createCard, BoxLayout.Y_AXIS));
-        createCard.setBackground(CARD_BACKGROUND);
-        createCard.setBorder(new EmptyBorder(30, 30, 30, 30));
+        // Form Panel
+        JPanel formPanel = new JPanel();
+        formPanel.setLayout(new BoxLayout(formPanel, BoxLayout.Y_AXIS));
+        formPanel.setBackground(CARD_COLOR);
+        formPanel.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(BORDER_COLOR),
+            new EmptyBorder(20, 20, 20, 20)
+        ));
+        formPanel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        // Username panel
-        JPanel usernamePanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        usernamePanel.setBackground(CARD_BACKGROUND);
-        JLabel usernameLabel = new JLabel("Username:");
-        usernameLabel.setForeground(Color.WHITE);
-        usernameLabel.setFont(new Font("Arial", Font.PLAIN, 14));
-        usernamePanel.add(usernameLabel);
+        // Username
+        JLabel usernameLabel = new JLabel("Username");
+        usernameLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        usernameLabel.setForeground(TEXT_COLOR);
+        formPanel.add(usernameLabel);
+        formPanel.add(Box.createVerticalStrut(5));
 
-        usernameField = new JTextField(20);
+        usernameField = new JTextField();
         styleTextField(usernameField);
-        usernamePanel.add(usernameField);
-        createCard.add(usernamePanel);
-        createCard.add(Box.createVerticalStrut(20));
+        formPanel.add(usernameField);
+        formPanel.add(Box.createVerticalStrut(15));
 
-        // Password panel
-        JPanel passwordPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        passwordPanel.setBackground(CARD_BACKGROUND);
-        JLabel passwordLabel = new JLabel("Password:");
-        passwordLabel.setForeground(Color.WHITE);
-        passwordLabel.setFont(new Font("Arial", Font.PLAIN, 14));
-        passwordPanel.add(passwordLabel);
+        // Password
+        JLabel passwordLabel = new JLabel("Password");
+        passwordLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        passwordLabel.setForeground(TEXT_COLOR);
+        formPanel.add(passwordLabel);
+        formPanel.add(Box.createVerticalStrut(5));
 
-        passwordField = new JPasswordField(20);
+        passwordField = new JPasswordField();
         styleTextField(passwordField);
-        passwordPanel.add(passwordField);
-        createCard.add(passwordPanel);
-        createCard.add(Box.createVerticalStrut(40));
+        formPanel.add(passwordField);
+        formPanel.add(Box.createVerticalStrut(20));
 
-        // Buttons panel
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 0));
-        buttonPanel.setBackground(CARD_BACKGROUND);
-
+        // Create Account Button
         createButton = new JButton("Create Account");
-        styleButton(createButton);
+        styleButton(createButton, true);
+        createButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+        formPanel.add(createButton);
+        formPanel.add(Box.createVerticalStrut(10));
 
-        buttonPanel.add(createButton);
-        createCard.add(buttonPanel);
+        // Back Button
+        backButton = new JButton("Back to Login");
+        styleButton(backButton, false);
+        backButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+        formPanel.add(backButton);
 
-        mainPanel.add(createCard);
+        mainPanel.add(formPanel);
 
         // Add action listeners
-        passwordField.addActionListener(e -> handleCreateAccount());
         createButton.addActionListener(e -> handleCreateAccount());
+        backButton.addActionListener(e -> dispose());
+        passwordField.addActionListener(e -> handleCreateAccount());
 
         add(mainPanel);
-        setLocationRelativeTo(null);
+    }
+
+    private void styleTextField(JTextField field) {
+        field.setPreferredSize(new Dimension(300, 35));
+        field.setMaximumSize(new Dimension(300, 35));
+        field.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        field.setBackground(Color.WHITE);
+        field.setForeground(TEXT_COLOR);
+        field.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(BORDER_COLOR),
+            BorderFactory.createEmptyBorder(5, 10, 5, 10)
+        ));
+    }
+
+    private void styleButton(JButton button, boolean isPrimary) {
+        button.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        button.setPreferredSize(new Dimension(300, 40));
+        button.setMaximumSize(new Dimension(300, 40));
+        button.setBackground(isPrimary ? PRIMARY_COLOR : Color.WHITE);
+        button.setForeground(isPrimary ? Color.WHITE : PRIMARY_COLOR);
+        button.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(isPrimary ? PRIMARY_COLOR : BORDER_COLOR),
+            BorderFactory.createEmptyBorder(5, 15, 5, 15)
+        ));
+        button.setFocusPainted(false);
+        button.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+        button.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseEntered(java.awt.event.MouseEvent evt) {
+                if (isPrimary) {
+                    button.setBackground(new Color(0, 99, 177));
+                } else {
+                    button.setBackground(HOVER_COLOR);
+                }
+            }
+            public void mouseExited(java.awt.event.MouseEvent evt) {
+                button.setBackground(isPrimary ? PRIMARY_COLOR : Color.WHITE);
+            }
+        });
     }
 
     private void handleCreateAccount() {
-        String username = usernameField.getText();
+        String username = usernameField.getText().trim();
         String password = new String(passwordField.getPassword());
 
         if (username.isEmpty() || password.isEmpty()) {
-            showErrorMessage("Fields cannot be empty!");
+            JOptionPane.showMessageDialog(this,
+                "Please fill in all fields",
+                "Error",
+                JOptionPane.ERROR_MESSAGE);
             return;
         }
 
         if (UserController.createUser(username, password)) {
-            showSuccessMessage("User created successfully!");
+            JOptionPane.showMessageDialog(this,
+                "Account created successfully!",
+                "Success",
+                JOptionPane.INFORMATION_MESSAGE);
             dispose();
         } else {
-            showErrorMessage("Failed to create user!");
+            JOptionPane.showMessageDialog(this,
+                "Failed to create account. Username might already exist.",
+                "Error",
+                JOptionPane.ERROR_MESSAGE);
         }
-    }
-
-    private void styleBackButton(JButton button) {
-        button.setBackground(BACKGROUND_COLOR);
-        button.setForeground(Color.WHITE);
-        button.setFont(new Font("Arial", Font.BOLD, 16));
-        button.setFocusPainted(false);
-        button.setBorderPainted(false);
-        button.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        
-        // Hover effect
-        button.addMouseListener(new java.awt.event.MouseAdapter() {
-            public void mouseEntered(java.awt.event.MouseEvent evt) {
-                button.setForeground(HOVER_COLOR);
-            }
-            public void mouseExited(java.awt.event.MouseEvent evt) {
-                button.setForeground(Color.WHITE);
-            }
-        });
-    }
-
-    private void styleTextField(JTextField textField) {
-        textField.setBackground(CARD_BACKGROUND);
-        textField.setForeground(Color.WHITE);
-        textField.setCaretColor(Color.WHITE);
-        textField.setFont(new Font("Arial", Font.PLAIN, 14));
-        textField.setPreferredSize(new Dimension(200, 35));
-        textField.setBorder(new LineBorder(BUTTON_COLOR, 1));
-    }
-
-    private void styleButton(JButton button) {
-        button.setBackground(BUTTON_COLOR);
-        button.setForeground(Color.WHITE);
-        button.setFont(new Font("Arial", Font.BOLD, 14));
-        button.setFocusPainted(false);
-        button.setBorderPainted(false);
-        button.setPreferredSize(new Dimension(150, 40));
-        
-        // Hover effect
-        button.addMouseListener(new java.awt.event.MouseAdapter() {
-            public void mouseEntered(java.awt.event.MouseEvent evt) {
-                button.setBackground(HOVER_COLOR);
-            }
-            public void mouseExited(java.awt.event.MouseEvent evt) {
-                button.setBackground(BUTTON_COLOR);
-            }
-        });
-    }
-
-    private void showErrorMessage(String message) {
-        JDialog dialog = new JDialog(this, "Error", true);
-        dialog.setLayout(new BorderLayout());
-        dialog.setSize(300, 100);
-        dialog.setLocationRelativeTo(this);
-        
-        JPanel panel = new JPanel();
-        panel.setBackground(BACKGROUND_COLOR);
-        JLabel label = new JLabel(message);
-        label.setForeground(Color.WHITE);
-        label.setFont(new Font("Arial", Font.BOLD, 16));
-        panel.add(label);
-        
-        dialog.add(panel, BorderLayout.CENTER);
-        dialog.setVisible(true);
-    }
-
-    private void showSuccessMessage(String message) {
-        JDialog dialog = new JDialog(this, "Success", true);
-        dialog.setLayout(new BorderLayout());
-        dialog.setSize(300, 100);
-        dialog.setLocationRelativeTo(this);
-        
-        JPanel panel = new JPanel();
-        panel.setBackground(BACKGROUND_COLOR);
-        JLabel label = new JLabel(message);
-        label.setForeground(Color.WHITE);
-        label.setFont(new Font("Arial", Font.BOLD, 16));
-        panel.add(label);
-        
-        dialog.add(panel, BorderLayout.CENTER);
-        dialog.setVisible(true);
     }
 }

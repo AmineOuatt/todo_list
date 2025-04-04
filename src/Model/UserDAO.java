@@ -54,6 +54,7 @@ public class UserDAO {
             return rowsInserted > 0;
         } catch (SQLException e) {
             System.out.println("Error creating user: " + e.getMessage());
+            e.printStackTrace(); // Add stack trace for debugging
         }
         return false;
     }
@@ -79,6 +80,7 @@ public class UserDAO {
             }
         } catch (SQLException e) {
             System.out.println("Error updating user: " + e.getMessage());
+            e.printStackTrace(); // Add stack trace for debugging
         }
         return false;
     }
@@ -93,12 +95,13 @@ public class UserDAO {
             return stmt.executeUpdate() > 0;
         } catch (SQLException e) {
             System.out.println("Error deleting user: " + e.getMessage());
+            e.printStackTrace(); // Add stack trace for debugging
         }
         return false;
     }
 
     public static User getUserByUsername(String username) {
-        String query = "SELECT * FROM users WHERE username = ?";
+        String query = "SELECT user_id, username, password_hash FROM Users WHERE username = ?";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(query)) {
             
@@ -109,11 +112,12 @@ public class UserDAO {
                 return new User(
                     rs.getInt("user_id"),
                     rs.getString("username"),
-                    rs.getString("password")
+                    rs.getString("password_hash")
                 );
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            System.out.println("Error getting user by username: " + e.getMessage());
+            e.printStackTrace(); // Add stack trace for debugging
         }
         return null;
     }
