@@ -2,6 +2,8 @@ package View;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
+import javax.swing.plaf.basic.BasicButtonUI;
+import javax.swing.plaf.basic.BasicGraphicsUtils;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.geom.*;
@@ -216,25 +218,32 @@ public class PomodoroView extends JFrame {
 
     private void styleButton(JButton button, boolean isPrimary) {
         button.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        button.setBackground(isPrimary ? PRIMARY_COLOR : Color.WHITE);
         button.setForeground(isPrimary ? Color.WHITE : PRIMARY_COLOR);
         button.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(isPrimary ? PRIMARY_COLOR : BORDER_COLOR),
             BorderFactory.createEmptyBorder(8, 20, 8, 20)
         ));
+        
+        // Make button fully transparent
+        button.setOpaque(false);
+        button.setContentAreaFilled(false);
+        button.setBorderPainted(true);
         button.setFocusPainted(false);
         button.setCursor(new Cursor(Cursor.HAND_CURSOR));
-
+        
+        // Override default painting
+        button.putClientProperty("JButton.buttonType", "borderless");
+        
         button.addMouseListener(new MouseAdapter() {
             public void mouseEntered(MouseEvent evt) {
                 if (isPrimary) {
-                    button.setBackground(new Color(0, 99, 177));
+                    button.setForeground(new Color(0, 99, 177));
                 } else {
-                    button.setBackground(new Color(245, 245, 245));
+                    button.setForeground(new Color(0, 70, 150));
                 }
             }
             public void mouseExited(MouseEvent evt) {
-                button.setBackground(isPrimary ? PRIMARY_COLOR : Color.WHITE);
+                button.setForeground(isPrimary ? Color.WHITE : PRIMARY_COLOR);
             }
         });
     }

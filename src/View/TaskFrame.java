@@ -28,8 +28,11 @@ public class TaskFrame extends JFrame {
     private JButton resetPomodoroButton;
     private int remainingSeconds;
     private boolean isBreak = false;
-    private int workDuration = 25 * 60; // 25 minutes in seconds
-    private int breakDuration = 5 * 60; // 5 minutes in seconds
+    private int workDuration = 25 * 60;  // 25 minutes in seconds
+    private int shortBreakDuration = 5 * 60;  // 5 minutes in seconds
+    private int longBreakDuration = 15 * 60;  // 15 minutes in seconds
+    private boolean autoStartBreaks = false;
+    private boolean autoStartPomodoros = false;
     
     // Modern Microsoft-style colors
     private static final Color PRIMARY_COLOR = new Color(42, 120, 255);    // Microsoft Blue
@@ -41,6 +44,9 @@ public class TaskFrame extends JFrame {
     private static final Color COMPLETED_COLOR = new Color(76, 175, 80);   // Green
     private static final Color PENDING_COLOR = new Color(255, 152, 0);     // Orange
     private static final Color SIDEBAR_COLOR = new Color(250, 250, 250);
+    private static final Color POMODORO_COLOR = new Color(219, 82, 77);    // Pomofocus Red
+    private static final Color SHORT_BREAK_COLOR = new Color(70, 142, 145); // Teal
+    private static final Color LONG_BREAK_COLOR = new Color(67, 126, 168);  // Blue
 
     // Custom calendar component
     private JPanel calendarPanel;
@@ -61,6 +67,24 @@ public class TaskFrame extends JFrame {
     private CircularProgressPanel progressPanel;
 
     private JPanel navigationPanel;
+
+    private Color currentPomodoroColor = POMODORO_COLOR;
+    private int pomodoroCount = 0;
+    private PomodoroMode currentMode = PomodoroMode.POMODORO;
+
+    private enum PomodoroMode {
+        POMODORO("Pomodoro", POMODORO_COLOR),
+        SHORT_BREAK("Short Break", SHORT_BREAK_COLOR),
+        LONG_BREAK("Long Break", LONG_BREAK_COLOR);
+
+        final String label;
+        final Color color;
+
+        PomodoroMode(String label, Color color) {
+            this.label = label;
+            this.color = color;
+        }
+    }
 
     public TaskFrame(int userId) {
         this.userId = userId;
@@ -109,6 +133,7 @@ public class TaskFrame extends JFrame {
         // Add panels to card layout
         mainContentPanel.add(taskDetailsPanel, "TASKS");
         mainContentPanel.add(createPomodoroPanel(), "POMODORO");
+        mainContentPanel.add(createDashboardPanel(), "DASHBOARD");
 
         // Add sidebar and main content to main container
         mainContainer.add(sidebarContainer, BorderLayout.WEST);
@@ -162,8 +187,8 @@ public class TaskFrame extends JFrame {
         dashboardButton = new JButton("📊 Dashboard");
         styleButton(dashboardButton, false);
         dashboardButton.addActionListener(e -> {
-            new DashboardView(userId, this).setVisible(true);
-            setVisible(false);
+            showPanel("DASHBOARD");
+            updateSelectedButton(dashboardButton);
         });
 
         // Add buttons to panel with spacing
@@ -287,167 +312,221 @@ public class TaskFrame extends JFrame {
     }
 
     private JPanel createPomodoroPanel() {
-        JPanel panel = new JPanel();
-        panel.setLayout(new BorderLayout(20, 20));
-        panel.setBackground(Color.WHITE);
+        JPanel panel = new JPanel(new BorderLayout(20, 20));
+        panel.setBackground(currentPomodoroColor);
         panel.setBorder(new EmptyBorder(20, 20, 20, 20));
 
-        // Timer display panel
+        // Mode selection panel with settings button
+        JPanel modePanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 0));
+        modePanel.setOpaque(false);
+
+        // Add mode buttons
+        for (PomodoroMode mode : PomodoroMode.values()) {
+            JButton modeButton = createModeButton(mode.label, mode);
+            modePanel.add(modeButton);
+        }
+
+        // Add settings button
+        JButton settingsButton = new JButton("Settings ⚙");
+        settingsButton.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        settingsButton.setForeground(Color.WHITE);
+        settingsButton.setBorderPainted(false);
+        settingsButton.setContentAreaFilled(false);
+        settingsButton.setOpaque(true);
+        settingsButton.setBackground(new Color(255, 255, 255, 30));
+        settingsButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        settingsButton.setBorder(BorderFactory.createEmptyBorder(8, 16, 8, 16));
+        
+        // Create settings popup
+        JPopupMenu settingsPopup = createSettingsPopup();
+        
+        settingsButton.addActionListener(e -> {
+            settingsPopup.show(settingsButton, 
+                             settingsButton.getWidth() - settingsPopup.getPreferredSize().width, 
+                             settingsButton.getHeight());
+        });
+        
+        settingsButton.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                settingsButton.setBackground(new Color(255, 255, 255, 50));
+            }
+            @Override
+            public void mouseExited(MouseEvent e) {
+                settingsButton.setBackground(new Color(255, 255, 255, 30));
+            }
+        });
+
+        modePanel.add(Box.createHorizontalStrut(10));
+        modePanel.add(settingsButton);
+
+        // Timer panel
         JPanel timerPanel = new JPanel(new BorderLayout(10, 10));
-        timerPanel.setBackground(Color.WHITE);
+        timerPanel.setOpaque(false);
 
-        // Create circular progress panel
-        progressPanel = new CircularProgressPanel();
-        progressPanel.setPreferredSize(new Dimension(200, 200));
-        timerPanel.add(progressPanel, BorderLayout.CENTER);
+        // Mode label
+        JLabel modeLabel = new JLabel(currentMode.label, SwingConstants.CENTER);
+        modeLabel.setFont(new Font("Segoe UI", Font.BOLD, 24));
+        modeLabel.setForeground(Color.WHITE);
+        timerPanel.add(modeLabel, BorderLayout.NORTH);
 
-        // Timer label
-        timerLabel = new JLabel("25:00");
-        timerLabel.setFont(new Font("Segoe UI", Font.BOLD, 32));
-        timerLabel.setHorizontalAlignment(SwingConstants.CENTER);
-        timerLabel.setForeground(TEXT_COLOR);
-        progressPanel.add(timerLabel);
+        // Timer display
+        JPanel timeDisplayPanel = new JPanel(new BorderLayout());
+        timeDisplayPanel.setOpaque(false);
+        timeDisplayPanel.setBorder(new EmptyBorder(40, 0, 40, 0));
 
-        // Control buttons panel
-        JPanel controlPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 0));
-        controlPanel.setBackground(Color.WHITE);
+        timerLabel = new JLabel("25:00", SwingConstants.CENTER);
+        timerLabel.setFont(new Font("Segoe UI", Font.BOLD, 120));
+        timerLabel.setForeground(Color.WHITE);
+        timeDisplayPanel.add(timerLabel, BorderLayout.CENTER);
 
-        startPomodoroButton = new JButton("Start");
-        resetPomodoroButton = new JButton("Reset");
-        styleButton(startPomodoroButton, true);
-        styleButton(resetPomodoroButton, false);
+        // Control buttons
+        JPanel controlPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 0));
+        controlPanel.setOpaque(false);
+
+        startPomodoroButton = new JButton("START");
+        resetPomodoroButton = new JButton("RESET");
+        
+        startPomodoroButton.setFont(new Font("Segoe UI", Font.BOLD, 24));
+        resetPomodoroButton.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        
+        stylePomodoroButton(startPomodoroButton, true);
+        stylePomodoroButton(resetPomodoroButton, false);
 
         startPomodoroButton.addActionListener(e -> togglePomodoro());
-        controlPanel.add(startPomodoroButton);
-
-        controlPanel.add(Box.createHorizontalStrut(10));
-
-        resetPomodoroButton = new JButton("Reset");
-        styleButton(resetPomodoroButton, false);
         resetPomodoroButton.addActionListener(e -> resetPomodoro());
+
+        controlPanel.add(startPomodoroButton);
         controlPanel.add(resetPomodoroButton);
 
-        panel.add(controlPanel);
+        timerPanel.add(timeDisplayPanel, BorderLayout.CENTER);
+        timerPanel.add(controlPanel, BorderLayout.SOUTH);
 
-        // Settings Panel
-        JPanel settingsPanel = new JPanel(new GridLayout(2, 2, 10, 5));
-        settingsPanel.setBackground(SIDEBAR_COLOR);
-        settingsPanel.setBorder(new EmptyBorder(10, 0, 0, 0));
-
-        JLabel workLabel = new JLabel("Work (min):");
-        JSpinner workSpinner = new JSpinner(new SpinnerNumberModel(25, 1, 60, 1));
-        workSpinner.addChangeListener(e -> workDuration = (int)workSpinner.getValue() * 60);
-
-        JLabel breakLabel = new JLabel("Break (min):");
-        JSpinner breakSpinner = new JSpinner(new SpinnerNumberModel(5, 1, 30, 1));
-        breakSpinner.addChangeListener(e -> breakDuration = (int)breakSpinner.getValue() * 60);
-
-        settingsPanel.add(workLabel);
-        settingsPanel.add(workSpinner);
-        settingsPanel.add(breakLabel);
-        settingsPanel.add(breakSpinner);
-
-        panel.add(Box.createVerticalStrut(10));
-        panel.add(settingsPanel);
+        // Add components to main panel
+        panel.add(modePanel, BorderLayout.NORTH);
+        panel.add(timerPanel, BorderLayout.CENTER);
 
         return panel;
     }
 
-    private JPanel createCalendarPanel() {
-        JPanel panel = new JPanel();
-        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-        panel.setBackground(SIDEBAR_COLOR);
-        panel.setBorder(new EmptyBorder(0, 20, 20, 20));
+    private JPopupMenu createSettingsPopup() {
+        JPopupMenu popup = new JPopupMenu();
+        popup.setBorder(BorderFactory.createLineBorder(Color.WHITE));
+        popup.setBackground(currentPomodoroColor);
 
-        JLabel titleLabel = new JLabel("Calendar");
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
-        titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        panel.add(titleLabel);
-        panel.add(Box.createVerticalStrut(10));
+        // Create a panel for settings
+        JPanel settingsPanel = new JPanel();
+        settingsPanel.setLayout(new BoxLayout(settingsPanel, BoxLayout.Y_AXIS));
+        settingsPanel.setBackground(currentPomodoroColor);
+        settingsPanel.setBorder(new EmptyBorder(15, 15, 15, 15));
 
-        // Calendar navigation panel
-        JPanel navigationPanel = new JPanel(new BorderLayout());
-        navigationPanel.setBackground(SIDEBAR_COLOR);
-        navigationPanel.setMaximumSize(new Dimension(200, 30));
+        // Work duration settings
+        JPanel workDurationPanel = createSettingsRow("Work Duration (minutes):", workDuration);
+        JSpinner workSpinner = (JSpinner) workDurationPanel.getComponent(1);
+        workSpinner.addChangeListener(e -> {
+            workDuration = (Integer) workSpinner.getValue() * 60;
+            if (currentMode == PomodoroMode.POMODORO) {
+                remainingSeconds = workDuration;
+                updateTimerLabel();
+            }
+        });
 
-        currentCalendar = Calendar.getInstance();
-        monthLabel = new JLabel(monthFormat.format(currentCalendar.getTime()), SwingConstants.CENTER);
-        monthLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        // Short break settings
+        JPanel shortBreakPanel = createSettingsRow("Short Break (minutes):", shortBreakDuration);
+        JSpinner shortBreakSpinner = (JSpinner) shortBreakPanel.getComponent(1);
+        shortBreakSpinner.addChangeListener(e -> {
+            shortBreakDuration = (Integer) shortBreakSpinner.getValue() * 60;
+            if (currentMode == PomodoroMode.SHORT_BREAK) {
+                remainingSeconds = shortBreakDuration;
+                updateTimerLabel();
+            }
+        });
 
-        JButton prevButton = new JButton("←");
-        JButton nextButton = new JButton("→");
-        styleButton(prevButton, false);
-        styleButton(nextButton, false);
+        // Long break settings
+        JPanel longBreakPanel = createSettingsRow("Long Break (minutes):", longBreakDuration);
+        JSpinner longBreakSpinner = (JSpinner) longBreakPanel.getComponent(1);
+        longBreakSpinner.addChangeListener(e -> {
+            longBreakDuration = (Integer) longBreakSpinner.getValue() * 60;
+            if (currentMode == PomodoroMode.LONG_BREAK) {
+                remainingSeconds = longBreakDuration;
+                updateTimerLabel();
+            }
+        });
 
-        prevButton.addActionListener(e -> changeMonth(-1));
-        nextButton.addActionListener(e -> changeMonth(1));
+        // Auto start breaks
+        JPanel autoStartPanel = createCheckboxRow("Auto-start breaks");
+        JCheckBox autoStartCheckbox = (JCheckBox) autoStartPanel.getComponent(0);
+        autoStartCheckbox.setSelected(autoStartBreaks);
+        autoStartCheckbox.addActionListener(e -> {
+            autoStartBreaks = autoStartCheckbox.isSelected();
+        });
 
-        navigationPanel.add(prevButton, BorderLayout.WEST);
-        navigationPanel.add(monthLabel, BorderLayout.CENTER);
-        navigationPanel.add(nextButton, BorderLayout.EAST);
+        // Auto start pomodoros
+        JPanel autoStartPomodoroPanel = createCheckboxRow("Auto-start pomodoros");
+        JCheckBox autoStartPomodoroCheckbox = (JCheckBox) autoStartPomodoroPanel.getComponent(0);
+        autoStartPomodoroCheckbox.setSelected(autoStartPomodoros);
+        autoStartPomodoroCheckbox.addActionListener(e -> {
+            autoStartPomodoros = autoStartPomodoroCheckbox.isSelected();
+        });
 
-        panel.add(navigationPanel);
-        panel.add(Box.createVerticalStrut(10));
+        // Add components with spacing
+        settingsPanel.add(workDurationPanel);
+        settingsPanel.add(Box.createVerticalStrut(10));
+        settingsPanel.add(shortBreakPanel);
+        settingsPanel.add(Box.createVerticalStrut(10));
+        settingsPanel.add(longBreakPanel);
+        settingsPanel.add(Box.createVerticalStrut(15));
+        settingsPanel.add(autoStartPanel);
+        settingsPanel.add(Box.createVerticalStrut(5));
+        settingsPanel.add(autoStartPomodoroPanel);
 
-        // Calendar grid
-        calendarPanel = new JPanel(new GridLayout(0, 7, 2, 2));
-        calendarPanel.setBackground(SIDEBAR_COLOR);
-        updateCalendar();
+        popup.add(settingsPanel);
+        return popup;
+    }
+
+    private JButton createModeButton(String text, PomodoroMode mode) {
+        JButton button = new JButton(text);
+        button.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        button.setForeground(Color.WHITE);
+        button.setBorderPainted(false);
+        button.setContentAreaFilled(false);
+        button.setOpaque(true);
+        button.setBackground(mode == currentMode ? new Color(255, 255, 255, 50) : new Color(0, 0, 0, 0));
+        button.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        button.setBorder(BorderFactory.createEmptyBorder(8, 16, 8, 16));
         
-        panel.add(calendarPanel);
-        return panel;
-    }
-
-    private void changeMonth(int delta) {
-        currentCalendar.add(Calendar.MONTH, delta);
-        monthLabel.setText(monthFormat.format(currentCalendar.getTime()));
-        updateCalendar();
-    }
-
-    private void updateCalendar() {
-        calendarPanel.removeAll();
+        button.addActionListener(e -> switchMode(mode));
+        button.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                if (mode != currentMode) {
+                    button.setBackground(new Color(255, 255, 255, 30));
+                }
+            }
+            @Override
+            public void mouseExited(MouseEvent e) {
+                if (mode != currentMode) {
+                    button.setBackground(new Color(0, 0, 0, 0));
+                }
+            }
+        });
         
-        // Add day labels
-        String[] days = {"Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"};
-        for (String day : days) {
-            JLabel label = new JLabel(day, SwingConstants.CENTER);
-            label.setFont(new Font("Segoe UI", Font.BOLD, 12));
-            calendarPanel.add(label);
-        }
-
-        // Get the first day of month and number of days
-        Calendar cal = (Calendar) currentCalendar.clone();
-        cal.set(Calendar.DAY_OF_MONTH, 1);
-        int firstDayOfWeek = cal.get(Calendar.DAY_OF_WEEK) - 1;
-        int daysInMonth = cal.getActualMaximum(Calendar.DAY_OF_MONTH);
-
-        // Add empty labels for days before the first day of month
-        for (int i = 0; i < firstDayOfWeek; i++) {
-            calendarPanel.add(new JLabel());
-        }
-
-        // Add day buttons
-        for (int day = 1; day <= daysInMonth; day++) {
-            JButton dayButton = new JButton(String.valueOf(day));
-            styleCalendarDayButton(dayButton);
-            calendarPanel.add(dayButton);
-        }
-
-        calendarPanel.revalidate();
-        calendarPanel.repaint();
+        return button;
     }
 
-    private void styleCalendarDayButton(JButton button) {
-        button.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+    private void stylePomodoroButton(JButton button, boolean isPrimary) {
+        button.setForeground(currentPomodoroColor);
         button.setBackground(Color.WHITE);
-        button.setForeground(TEXT_COLOR);
-        button.setBorder(BorderFactory.createLineBorder(BORDER_COLOR, 1));
+        button.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(Color.WHITE, 2),
+            BorderFactory.createEmptyBorder(12, 30, 12, 30)
+        ));
         button.setFocusPainted(false);
-        button.setPreferredSize(new Dimension(25, 25));
+        button.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
         button.addMouseListener(new MouseAdapter() {
             public void mouseEntered(MouseEvent evt) {
-                button.setBackground(HOVER_COLOR);
+                button.setBackground(new Color(245, 245, 245));
             }
             public void mouseExited(MouseEvent evt) {
                 button.setBackground(Color.WHITE);
@@ -455,320 +534,118 @@ public class TaskFrame extends JFrame {
         });
     }
 
-    private JPanel createDashboardPanel() {
-        JPanel panel = new JPanel();
-        panel.setLayout(new BorderLayout(20, 20));
-        panel.setBackground(Color.WHITE);
-        panel.setBorder(new EmptyBorder(20, 20, 20, 20));
-
-        // Left side panel (Tasks and Statistics)
-        JPanel leftPanel = new JPanel();
-        leftPanel.setLayout(new BoxLayout(leftPanel, BoxLayout.Y_AXIS));
-        leftPanel.setBackground(Color.WHITE);
-
-        // Recent Tasks Section
-        JPanel tasksPanel = createSectionPanel("Recent Tasks", true);
-        tasksPanel.add(createTaskList());
-        leftPanel.add(tasksPanel);
-        leftPanel.add(Box.createVerticalStrut(20));
-
-        // Statistics Section
-        JPanel statsPanel = createSectionPanel("Statistics", true);
-        statsPanel.add(createStatisticsChart());
-        leftPanel.add(statsPanel);
-
-        // Right side panel (Folders and Notes)
-        JPanel rightPanel = new JPanel();
-        rightPanel.setLayout(new BoxLayout(rightPanel, BoxLayout.Y_AXIS));
-        rightPanel.setBackground(Color.WHITE);
-
-        // Folders Section
-        JPanel foldersPanel = createSectionPanel("Folders", true);
-        foldersPanel.add(createFoldersGrid());
-        rightPanel.add(foldersPanel);
-        rightPanel.add(Box.createVerticalStrut(20));
-
-        // Notes Section
-        JPanel notesPanel = createSectionPanel("Notes", true);
-        notesPanel.add(createNotesList());
-        rightPanel.add(notesPanel);
-
-        // Add panels to main dashboard
-        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, leftPanel, rightPanel);
-        splitPane.setDividerLocation(0.5);
-        splitPane.setResizeWeight(0.5);
-        splitPane.setBorder(null);
-        splitPane.setDividerSize(20);
-        panel.add(splitPane, BorderLayout.CENTER);
-
-        return panel;
-    }
-
-    private JPanel createSectionPanel(String title, boolean showAll) {
-        JPanel panel = new JPanel();
-        panel.setLayout(new BorderLayout(10, 10));
-        panel.setBackground(Color.WHITE);
-        panel.setBorder(BorderFactory.createEmptyBorder(0, 0, 20, 0));
-
-        // Header panel with title and "All" link
-        JPanel headerPanel = new JPanel(new BorderLayout());
-        headerPanel.setBackground(Color.WHITE);
-
-        JLabel titleLabel = new JLabel(title);
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
-        headerPanel.add(titleLabel, BorderLayout.WEST);
-
-        if (showAll) {
-            JButton allButton = new JButton("All >");
-            allButton.setBorderPainted(false);
-            allButton.setContentAreaFilled(false);
-            allButton.setForeground(PRIMARY_COLOR);
-            allButton.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-            allButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
-            headerPanel.add(allButton, BorderLayout.EAST);
-        }
-
-        panel.add(headerPanel, BorderLayout.NORTH);
-        return panel;
-    }
-
-    private JPanel createTaskList() {
-        JPanel panel = new JPanel();
-        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-        panel.setBackground(Color.WHITE);
-
-        List<Task> tasks = TaskController.getTasks(userId);
-        for (Task task : tasks) {
-            panel.add(createTaskItem(task));
-            panel.add(Box.createVerticalStrut(10));
-        }
-
-        return panel;
-    }
-
-    private JPanel createTaskItem(Task task) {
-        JPanel panel = new JPanel(new BorderLayout(10, 0));
-        panel.setBackground(Color.WHITE);
-        panel.setBorder(BorderFactory.createEmptyBorder(5, 0, 5, 0));
-
-        JCheckBox checkbox = new JCheckBox();
-        checkbox.setBackground(Color.WHITE);
-        checkbox.setSelected(task.getStatus().equalsIgnoreCase("completed"));
-        
-        JLabel titleLabel = new JLabel(task.getTitle());
-        titleLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        if (task.getStatus().equalsIgnoreCase("completed")) {
-            titleLabel.setForeground(Color.GRAY);
-            // Add strikethrough effect for completed tasks
-            titleLabel.setText("<html><strike>" + task.getTitle() + "</strike></html>");
-        }
-
-        JLabel dateLabel = new JLabel(formatDueDate(task.getDueDate()));
-        dateLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        dateLabel.setForeground(new Color(150, 150, 150));
-
-        panel.add(checkbox, BorderLayout.WEST);
-        panel.add(titleLabel, BorderLayout.CENTER);
-        panel.add(dateLabel, BorderLayout.EAST);
-
-        return panel;
-    }
-
-    private String formatDueDate(Date date) {
-        if (date == null) return "";
-        
-        Calendar today = Calendar.getInstance();
-        Calendar dueDate = Calendar.getInstance();
-        dueDate.setTime(date);
-
-        if (today.get(Calendar.YEAR) == dueDate.get(Calendar.YEAR) &&
-            today.get(Calendar.DAY_OF_YEAR) == dueDate.get(Calendar.DAY_OF_YEAR)) {
-            return "Today";
-        } else if (today.get(Calendar.YEAR) == dueDate.get(Calendar.YEAR) &&
-                   today.get(Calendar.DAY_OF_YEAR) + 1 == dueDate.get(Calendar.DAY_OF_YEAR)) {
-            return "Tomorrow";
-        } else {
-            SimpleDateFormat sdf = new SimpleDateFormat("d MMM");
-            return sdf.format(date);
+    private void switchMode(PomodoroMode newMode) {
+        if (currentMode != newMode) {
+            currentMode = newMode;
+            currentPomodoroColor = newMode.color;
+            
+            // Set duration based on mode
+            switch (newMode) {
+                case POMODORO:
+                    remainingSeconds = workDuration;
+                    break;
+                case SHORT_BREAK:
+                    remainingSeconds = shortBreakDuration;
+                    break;
+                case LONG_BREAK:
+                    remainingSeconds = longBreakDuration;
+                    break;
+            }
+            
+            resetPomodoro();
+            updatePomodoroUI();
         }
     }
 
-    private JPanel createFoldersGrid() {
-        JPanel panel = new JPanel(new GridLayout(0, 3, 10, 10));
-        panel.setBackground(Color.WHITE);
-
-        // Sample folders - you can modify these or load from your data
-        createFolderItem(panel, "Work", new Color(200, 230, 255));
-        createFolderItem(panel, "Training", new Color(200, 255, 220));
-        createFolderItem(panel, "Personal", new Color(255, 220, 255));
-
-        return panel;
+    private void updatePomodoroUI() {
+        // Find and update the Pomodoro panel
+        for (Component comp : mainContentPanel.getComponents()) {
+            if (comp.isVisible() && comp instanceof JPanel) {
+                updatePanelColors((JPanel) comp);
+            }
+        }
+        updateTimerLabel();
     }
 
-    private void createFolderItem(JPanel parent, String name, Color bgColor) {
-        JPanel folderPanel = new JPanel();
-        folderPanel.setLayout(new BoxLayout(folderPanel, BoxLayout.Y_AXIS));
-        folderPanel.setBackground(bgColor);
-        folderPanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
-        folderPanel.setPreferredSize(new Dimension(100, 100));
-
-        JLabel iconLabel = new JLabel("📁");
-        iconLabel.setFont(new Font("Segoe UI", Font.PLAIN, 24));
-        iconLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-
-        JLabel nameLabel = new JLabel(name);
-        nameLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        nameLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-
-        folderPanel.add(iconLabel);
-        folderPanel.add(Box.createVerticalStrut(5));
-        folderPanel.add(nameLabel);
-
-        parent.add(folderPanel);
-    }
-
-    private JPanel createNotesList() {
-        JPanel panel = new JPanel();
-        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-        panel.setBackground(Color.WHITE);
-
-        // Sample notes - you can modify these or load from your data
-        addNote(panel, "Bank working hours 09:00 - 19:00");
-        addNote(panel, "To be, or not to be, that is the question:");
-        addNote(panel, "Whether 'tis nobler in the mind...");
-
-        return panel;
-    }
-
-    private void addNote(JPanel parent, String text) {
-        JLabel noteLabel = new JLabel(text);
-        noteLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        noteLabel.setBorder(BorderFactory.createEmptyBorder(5, 0, 5, 0));
-        parent.add(noteLabel);
-    }
-
-    private JPanel createStatisticsChart() {
-        JPanel panel = new JPanel() {
-            @Override
-            protected void paintComponent(Graphics g) {
-                super.paintComponent(g);
-                Graphics2D g2 = (Graphics2D) g;
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-
-                // Get task statistics for the week
-                int[] dailyTasks = getWeeklyTaskStats();
-                
-                int width = getWidth() - 40;
-                int height = getHeight() - 40;
-                int x = 20;
-                int y = height + 20;
-                
-                // Draw smooth line chart
-                g2.setColor(new Color(100, 180, 255, 50));
-                int[] xPoints = new int[dailyTasks.length];
-                int[] yPoints = new int[dailyTasks.length];
-                
-                for (int i = 0; i < dailyTasks.length; i++) {
-                    xPoints[i] = x + (i * width / (dailyTasks.length - 1));
-                    yPoints[i] = y - (dailyTasks[i] * height / 20);
-                }
-                
-                // Draw filled area
-                int[] polygonX = new int[dailyTasks.length + 2];
-                int[] polygonY = new int[dailyTasks.length + 2];
-                
-                // Start from bottom left
-                polygonX[0] = x;
-                polygonY[0] = y;
-                
-                // Add all points
-                System.arraycopy(xPoints, 0, polygonX, 1, xPoints.length);
-                System.arraycopy(yPoints, 0, polygonY, 1, yPoints.length);
-                
-                // End at bottom right
-                polygonX[polygonX.length - 1] = x + width;
-                polygonY[polygonY.length - 1] = y;
-                
-                g2.fillPolygon(polygonX, polygonY, polygonX.length);
-                
-                // Draw line
-                g2.setColor(PRIMARY_COLOR);
-                g2.setStroke(new BasicStroke(2f));
-                for (int i = 0; i < dailyTasks.length - 1; i++) {
-                    g2.drawLine(xPoints[i], yPoints[i], xPoints[i + 1], yPoints[i + 1]);
-                }
-                
-                // Draw points
-                g2.setColor(Color.WHITE);
-                g2.setStroke(new BasicStroke(2f));
-                for (int i = 0; i < dailyTasks.length; i++) {
-                    g2.fillOval(xPoints[i] - 4, yPoints[i] - 4, 8, 8);
-                    g2.setColor(PRIMARY_COLOR);
-                    g2.drawOval(xPoints[i] - 4, yPoints[i] - 4, 8, 8);
-                }
-                
-                // Draw x-axis labels
-                g2.setColor(TEXT_COLOR);
-                String[] days = {"Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"};
-                for (int i = 0; i < days.length; i++) {
-                    g2.drawString(days[i], xPoints[i] - 15, y + 15);
+    private void updatePanelColors(JPanel panel) {
+        if (panel.getLayout() instanceof BorderLayout) {
+            panel.setBackground(currentPomodoroColor);
+            for (Component comp : panel.getComponents()) {
+                if (comp instanceof JPanel) {
+                    updatePanelColors((JPanel) comp);
+                } else if (comp instanceof JButton) {
+                    JButton button = (JButton) comp;
+                    if (button == startPomodoroButton || button == resetPomodoroButton) {
+                        button.setForeground(currentPomodoroColor);
+                    }
                 }
             }
-        };
-        
-        panel.setPreferredSize(new Dimension(0, 200));
-        panel.setBackground(Color.WHITE);
-        return panel;
-    }
-
-    private int[] getWeeklyTaskStats() {
-        // This should be implemented to get actual task statistics
-        // For now, returning sample data
-        return new int[]{8, 12, 15, 10, 14, 9, 11};
+        }
     }
 
     private void initializePomodoroTimer() {
         remainingSeconds = workDuration;
-        pomodoroTimer = new Timer(1000, e -> updateTimer());
-        updateTimerLabel();
+        pomodoroTimer = new Timer(1000, e -> {
+            if (remainingSeconds > 0) {
+                remainingSeconds--;
+                updateTimerLabel();
+            } else {
+                pomodoroTimer.stop();
+                handlePomodoroComplete();
+            }
+        });
+    }
+
+    private void handlePomodoroComplete() {
+        Toolkit.getDefaultToolkit().beep();
+        
+        if (currentMode == PomodoroMode.POMODORO) {
+            pomodoroCount++;
+            String message = "Time for a break!";
+            JOptionPane.showMessageDialog(this, message, "Timer Complete", JOptionPane.INFORMATION_MESSAGE);
+            
+            if (pomodoroCount % 4 == 0) {
+                if (autoStartBreaks) {
+                    switchMode(PomodoroMode.LONG_BREAK);
+                    togglePomodoro();
+                } else {
+                    switchMode(PomodoroMode.LONG_BREAK);
+                }
+            } else {
+                if (autoStartBreaks) {
+                    switchMode(PomodoroMode.SHORT_BREAK);
+                    togglePomodoro();
+                } else {
+                    switchMode(PomodoroMode.SHORT_BREAK);
+                }
+            }
+        } else {
+            String message = "Break is over, back to work!";
+            JOptionPane.showMessageDialog(this, message, "Timer Complete", JOptionPane.INFORMATION_MESSAGE);
+            
+            if (autoStartPomodoros) {
+                switchMode(PomodoroMode.POMODORO);
+                togglePomodoro();
+            } else {
+                switchMode(PomodoroMode.POMODORO);
+            }
+        }
     }
 
     private void togglePomodoro() {
         if (pomodoroTimer.isRunning()) {
             pomodoroTimer.stop();
-            startPomodoroButton.setText("Start");
+            startPomodoroButton.setText("START");
         } else {
             pomodoroTimer.start();
-            startPomodoroButton.setText("Pause");
+            startPomodoroButton.setText("PAUSE");
         }
     }
 
     private void resetPomodoro() {
         pomodoroTimer.stop();
         remainingSeconds = workDuration;
-        isBreak = false;
-        startPomodoroButton.setText("Start");
-        updateTimerLabel();
-    }
-
-    private void updateTimer() {
-        remainingSeconds--;
-        if (remainingSeconds <= 0) {
-            pomodoroTimer.stop();
-            Toolkit.getDefaultToolkit().beep();
-            
-            if (isBreak) {
-                remainingSeconds = workDuration;
-                isBreak = false;
-                JOptionPane.showMessageDialog(this, "Break is over! Time to work!");
-            } else {
-                remainingSeconds = breakDuration;
-                isBreak = true;
-                JOptionPane.showMessageDialog(this, "Time for a break!");
-            }
-            
-            startPomodoroButton.setText("Start");
-        }
+        startPomodoroButton.setText("START");
         updateTimerLabel();
     }
 
@@ -1141,10 +1018,17 @@ public class TaskFrame extends JFrame {
         cl.show(mainContentPanel, name);
         
         // Update button states
-        if (name.equals("TASKS")) {
-            updateSelectedButton((JButton) navigationPanel.getComponent(0));
-        } else if (name.equals("POMODORO")) {
-            updateSelectedButton(pomodoroButton);
+        switch (name) {
+            case "TASKS":
+                updateSelectedButton((JButton) navigationPanel.getComponent(0));
+                break;
+            case "POMODORO":
+                updateSelectedButton(pomodoroButton);
+                break;
+            case "DASHBOARD":
+                updateSelectedButton(dashboardButton);
+                updateDashboard(); // Refresh dashboard data
+                break;
         }
     }
 
@@ -1175,5 +1059,328 @@ public class TaskFrame extends JFrame {
             g2.setColor(PRIMARY_COLOR);
             g2.drawArc(x, y, size, size, 90, -(int) (progress * 360));
         }
+    }
+
+    private String formatDueDate(Date date) {
+        if (date == null) return "";
+        
+        Calendar today = Calendar.getInstance();
+        Calendar dueDate = Calendar.getInstance();
+        dueDate.setTime(date);
+
+        if (today.get(Calendar.YEAR) == dueDate.get(Calendar.YEAR) &&
+            today.get(Calendar.DAY_OF_YEAR) == dueDate.get(Calendar.DAY_OF_YEAR)) {
+            return "Today";
+        } else if (today.get(Calendar.YEAR) == dueDate.get(Calendar.YEAR) &&
+                   today.get(Calendar.DAY_OF_YEAR) + 1 == dueDate.get(Calendar.DAY_OF_YEAR)) {
+            return "Tomorrow";
+        } else {
+            SimpleDateFormat sdf = new SimpleDateFormat("d MMM");
+            return sdf.format(date);
+        }
+    }
+
+    private JPanel createDashboardPanel() {
+        JPanel panel = new JPanel(new BorderLayout(20, 20));
+        panel.setBackground(BACKGROUND_COLOR);
+        panel.setBorder(new EmptyBorder(20, 20, 20, 20));
+
+        // Create split pane for left and right sections
+        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
+        splitPane.setDividerLocation(0.6);
+        splitPane.setResizeWeight(0.6);
+        splitPane.setBorder(null);
+
+        // Left panel (Tasks and Statistics)
+        JPanel leftPanel = new JPanel(new GridLayout(2, 1, 0, 20));
+        leftPanel.setBackground(BACKGROUND_COLOR);
+
+        // Recent Tasks Section
+        JPanel tasksSection = createSectionPanel("Recent Tasks");
+        JPanel tasksList = new JPanel();
+        tasksList.setLayout(new BoxLayout(tasksList, BoxLayout.Y_AXIS));
+        tasksList.setBackground(CARD_COLOR);
+
+        List<Task> recentTasks = TaskController.getTasks(userId);
+        for (int i = 0; i < Math.min(5, recentTasks.size()); i++) {
+            Task task = recentTasks.get(i);
+            tasksList.add(createTaskItem(task));
+            if (i < Math.min(4, recentTasks.size())) {
+                tasksList.add(createSeparator());
+            }
+        }
+
+        JScrollPane tasksScroll = new JScrollPane(tasksList);
+        tasksScroll.setBorder(null);
+        tasksScroll.setBackground(CARD_COLOR);
+        tasksSection.add(tasksScroll, BorderLayout.CENTER);
+
+        // Statistics Section
+        JPanel statsSection = createSectionPanel("Statistics");
+        ChartPanel chartPanel = new ChartPanel(new int[]{0, 0, 0});
+        chartPanel.setPreferredSize(new Dimension(0, 200));
+        statsSection.add(chartPanel, BorderLayout.CENTER);
+
+        leftPanel.add(tasksSection);
+        leftPanel.add(statsSection);
+
+        // Right panel (Folders and Notes)
+        JPanel rightPanel = new JPanel(new GridLayout(2, 1, 0, 20));
+        rightPanel.setBackground(BACKGROUND_COLOR);
+
+        // Folders Section
+        JPanel foldersSection = createSectionPanel("Folders");
+        JPanel foldersGrid = new JPanel(new GridLayout(0, 2, 10, 10));
+        foldersGrid.setBackground(CARD_COLOR);
+        
+        String[] folderNames = {"Work", "Personal", "Training"};
+        Color[] folderColors = {new Color(255, 107, 107), new Color(79, 193, 233), new Color(162, 155, 254)};
+        
+        for (int i = 0; i < folderNames.length; i++) {
+            foldersGrid.add(createFolderCard(folderNames[i], folderColors[i]));
+        }
+        
+        foldersSection.add(foldersGrid, BorderLayout.CENTER);
+
+        // Notes Section
+        JPanel notesSection = createSectionPanel("Notes");
+        JPanel notesList = new JPanel();
+        notesList.setLayout(new BoxLayout(notesList, BoxLayout.Y_AXIS));
+        notesList.setBackground(CARD_COLOR);
+        
+        // Add sample notes (replace with actual notes later)
+        String[] sampleNotes = {
+            "Meeting notes from yesterday",
+            "Project ideas",
+            "Weekly goals"
+        };
+        
+        for (int i = 0; i < sampleNotes.length; i++) {
+            notesList.add(createNoteItem(sampleNotes[i]));
+            if (i < sampleNotes.length - 1) {
+                notesList.add(createSeparator());
+            }
+        }
+        
+        notesSection.add(notesList, BorderLayout.CENTER);
+
+        rightPanel.add(foldersSection);
+        rightPanel.add(notesSection);
+
+        // Add panels to split pane
+        splitPane.setLeftComponent(leftPanel);
+        splitPane.setRightComponent(rightPanel);
+
+        panel.add(splitPane, BorderLayout.CENTER);
+        return panel;
+    }
+
+    private JPanel createSectionPanel(String title) {
+        JPanel panel = new JPanel(new BorderLayout(0, 10));
+        panel.setBackground(CARD_COLOR);
+        panel.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(BORDER_COLOR),
+            new EmptyBorder(15, 15, 15, 15)
+        ));
+
+        // Header with title and optional link
+        JPanel header = new JPanel(new BorderLayout());
+        header.setBackground(CARD_COLOR);
+
+        JLabel titleLabel = new JLabel(title);
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        titleLabel.setForeground(TEXT_COLOR);
+        header.add(titleLabel, BorderLayout.WEST);
+
+        JLabel viewAllLink = new JLabel("View all >");
+        viewAllLink.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        viewAllLink.setForeground(PRIMARY_COLOR);
+        viewAllLink.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        header.add(viewAllLink, BorderLayout.EAST);
+
+        panel.add(header, BorderLayout.NORTH);
+        return panel;
+    }
+
+    private JPanel createTaskItem(Task task) {
+        JPanel panel = new JPanel(new BorderLayout(10, 0));
+        panel.setBackground(CARD_COLOR);
+        panel.setBorder(new EmptyBorder(8, 0, 8, 0));
+
+        // Checkbox
+        JCheckBox checkbox = new JCheckBox();
+        checkbox.setBackground(CARD_COLOR);
+        checkbox.setSelected(task.getStatus().equalsIgnoreCase("completed"));
+        panel.add(checkbox, BorderLayout.WEST);
+
+        // Task details
+        JPanel details = new JPanel(new BorderLayout(5, 0));
+        details.setBackground(CARD_COLOR);
+
+        JLabel titleLabel = new JLabel(task.getTitle());
+        titleLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        if (task.getStatus().equalsIgnoreCase("completed")) {
+            titleLabel.setText("<html><strike>" + task.getTitle() + "</strike></html>");
+            titleLabel.setForeground(new Color(158, 158, 158));
+        } else {
+            titleLabel.setForeground(TEXT_COLOR);
+        }
+        details.add(titleLabel, BorderLayout.CENTER);
+
+        if (task.getDueDate() != null) {
+            JLabel dateLabel = new JLabel(formatDueDate(task.getDueDate()));
+            dateLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+            dateLabel.setForeground(new Color(158, 158, 158));
+            details.add(dateLabel, BorderLayout.EAST);
+        }
+
+        panel.add(details, BorderLayout.CENTER);
+        return panel;
+    }
+
+    private JPanel createFolderCard(String name, Color color) {
+        JPanel panel = new JPanel(new BorderLayout(10, 5));
+        panel.setBackground(CARD_COLOR);
+        panel.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(BORDER_COLOR),
+            new EmptyBorder(15, 15, 15, 15)
+        ));
+        panel.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+        // Folder icon (colored circle)
+        JPanel iconPanel = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2d = (Graphics2D) g;
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2d.setColor(color);
+                g2d.fillOval(0, 0, 12, 12);
+            }
+        };
+        iconPanel.setPreferredSize(new Dimension(12, 12));
+        iconPanel.setBackground(CARD_COLOR);
+        panel.add(iconPanel, BorderLayout.WEST);
+
+        // Folder name and task count
+        JPanel textPanel = new JPanel(new BorderLayout(5, 5));
+        textPanel.setBackground(CARD_COLOR);
+
+        JLabel nameLabel = new JLabel(name);
+        nameLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        nameLabel.setForeground(TEXT_COLOR);
+        textPanel.add(nameLabel, BorderLayout.NORTH);
+
+        // Count tasks in this folder (placeholder)
+        JLabel countLabel = new JLabel("3 tasks");
+        countLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        countLabel.setForeground(new Color(158, 158, 158));
+        textPanel.add(countLabel, BorderLayout.SOUTH);
+
+        panel.add(textPanel, BorderLayout.CENTER);
+        return panel;
+    }
+
+    private JPanel createNoteItem(String title) {
+        JPanel panel = new JPanel(new BorderLayout(10, 0));
+        panel.setBackground(CARD_COLOR);
+        panel.setBorder(new EmptyBorder(8, 0, 8, 0));
+        panel.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+        // Note icon
+        JLabel iconLabel = new JLabel("📝");
+        iconLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        panel.add(iconLabel, BorderLayout.WEST);
+
+        // Note title
+        JLabel titleLabel = new JLabel(title);
+        titleLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        titleLabel.setForeground(TEXT_COLOR);
+        panel.add(titleLabel, BorderLayout.CENTER);
+
+        return panel;
+    }
+
+    private JSeparator createSeparator() {
+        JSeparator separator = new JSeparator(JSeparator.HORIZONTAL);
+        separator.setForeground(BORDER_COLOR);
+        separator.setBackground(CARD_COLOR);
+        return separator;
+    }
+
+    private JPanel createSettingsRow(String label, int defaultValue) {
+        JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+        panel.setOpaque(false);
+
+        JLabel titleLabel = new JLabel(label);
+        titleLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        titleLabel.setForeground(Color.WHITE);
+
+        SpinnerModel model = new SpinnerNumberModel(defaultValue / 60, 1, 60, 1);
+        JSpinner spinner = new JSpinner(model);
+        spinner.setPreferredSize(new Dimension(60, 30));
+        JComponent editor = spinner.getEditor();
+        if (editor instanceof JSpinner.DefaultEditor) {
+            JTextField tf = ((JSpinner.DefaultEditor) editor).getTextField();
+            tf.setBackground(Color.WHITE);
+            tf.setForeground(currentPomodoroColor);
+            tf.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+            tf.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(Color.WHITE),
+                BorderFactory.createEmptyBorder(2, 5, 2, 5)
+            ));
+        }
+
+        panel.add(titleLabel);
+        panel.add(spinner);
+        return panel;
+    }
+
+    private JPanel createCheckboxRow(String label) {
+        JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        panel.setOpaque(false);
+
+        JCheckBox checkbox = new JCheckBox(label);
+        checkbox.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        checkbox.setForeground(Color.WHITE);
+        checkbox.setOpaque(false);
+        checkbox.setFocusPainted(false);
+        checkbox.setIcon(createCheckboxIcon(false));
+        checkbox.setSelectedIcon(createCheckboxIcon(true));
+
+        panel.add(checkbox);
+        return panel;
+    }
+
+    private Icon createCheckboxIcon(boolean selected) {
+        return new Icon() {
+            @Override
+            public void paintIcon(Component c, Graphics g, int x, int y) {
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                
+                // Draw checkbox
+                g2d.setColor(selected ? Color.WHITE : new Color(255, 255, 255, 100));
+                g2d.drawRect(x, y, 16, 16);
+                
+                if (selected) {
+                    g2d.setStroke(new BasicStroke(2));
+                    g2d.drawLine(x + 3, y + 8, x + 7, y + 12);
+                    g2d.drawLine(x + 7, y + 12, x + 13, y + 4);
+                }
+                
+                g2d.dispose();
+            }
+
+            @Override
+            public int getIconWidth() {
+                return 16;
+            }
+
+            @Override
+            public int getIconHeight() {
+                return 16;
+            }
+        };
     }
 }
