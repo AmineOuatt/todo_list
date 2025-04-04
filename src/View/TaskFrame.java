@@ -35,18 +35,16 @@ public class TaskFrame extends JFrame {
     private boolean autoStartPomodoros = false;
     
     // Modern Microsoft-style colors
-    private static final Color PRIMARY_COLOR = new Color(42, 120, 255);    // Microsoft Blue
-    private static final Color BACKGROUND_COLOR = new Color(243, 243, 243); // Light Gray
+    private static final Color PRIMARY_COLOR = new Color(77, 100, 255);    // TickTick Blue
+    private static final Color BACKGROUND_COLOR = new Color(255, 255, 255); // White
+    private static final Color SIDEBAR_COLOR = new Color(247, 248, 250);   // Light Gray
+    private static final Color TEXT_COLOR = new Color(37, 38, 43);         // Dark Gray
+    private static final Color BORDER_COLOR = new Color(233, 234, 236);    // Light Border
+    private static final Color HOVER_COLOR = new Color(242, 243, 245);     // Light Hover
+    private static final Color ACCENT_COLOR = new Color(77, 100, 255);     // TickTick Accent
+    private static final Color COMPLETED_COLOR = new Color(52, 199, 89);   // Green
+    private static final Color PENDING_COLOR = new Color(255, 149, 0);     // Orange
     private static final Color CARD_COLOR = Color.WHITE;
-    private static final Color TEXT_COLOR = new Color(33, 33, 33);
-    private static final Color BORDER_COLOR = new Color(225, 225, 225);
-    private static final Color HOVER_COLOR = new Color(230, 240, 255);
-    private static final Color COMPLETED_COLOR = new Color(76, 175, 80);   // Green
-    private static final Color PENDING_COLOR = new Color(255, 152, 0);     // Orange
-    private static final Color SIDEBAR_COLOR = new Color(250, 250, 250);
-    private static final Color POMODORO_COLOR = new Color(219, 82, 77);    // Pomofocus Red
-    private static final Color SHORT_BREAK_COLOR = new Color(70, 142, 145); // Teal
-    private static final Color LONG_BREAK_COLOR = new Color(67, 126, 168);  // Blue
 
     // Custom calendar component
     private JPanel calendarPanel;
@@ -68,14 +66,14 @@ public class TaskFrame extends JFrame {
 
     private JPanel navigationPanel;
 
-    private Color currentPomodoroColor = POMODORO_COLOR;
+    private Color currentPomodoroColor = PRIMARY_COLOR;
     private int pomodoroCount = 0;
     private PomodoroMode currentMode = PomodoroMode.POMODORO;
 
     private enum PomodoroMode {
-        POMODORO("Pomodoro", POMODORO_COLOR),
-        SHORT_BREAK("Short Break", SHORT_BREAK_COLOR),
-        LONG_BREAK("Long Break", LONG_BREAK_COLOR);
+        POMODORO("Pomodoro", PRIMARY_COLOR),
+        SHORT_BREAK("Short Break", ACCENT_COLOR),
+        LONG_BREAK("Long Break", PRIMARY_COLOR);
 
         final String label;
         final Color color;
@@ -165,41 +163,157 @@ public class TaskFrame extends JFrame {
         JPanel panel = new JPanel();
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
         panel.setBackground(SIDEBAR_COLOR);
-        panel.setBorder(new EmptyBorder(20, 20, 20, 20));
+        panel.setBorder(new EmptyBorder(20, 15, 20, 15));
 
-        // Tasks button
-        JButton tasksButton = new JButton("📝 Tasks");
-        styleButton(tasksButton, true);  // Start with Tasks selected
-        tasksButton.addActionListener(e -> {
-            showPanel("TASKS");
-            updateSelectedButton(tasksButton);
-        });
+        // Add logo/brand at the top
+        JLabel logoLabel = new JLabel("TaskFrame");
+        logoLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        logoLabel.setForeground(PRIMARY_COLOR);
+        logoLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        panel.add(logoLabel);
+        panel.add(Box.createVerticalStrut(25));
 
-        // Pomodoro button
-        pomodoroButton = new JButton("⏱️ Pomodoro");
-        styleButton(pomodoroButton, false);
-        pomodoroButton.addActionListener(e -> {
-            showPanel("POMODORO");
-            updateSelectedButton(pomodoroButton);
-        });
+        // Create navigation sections
+        String[][] sections = {
+            {"TASKS", "📝 All Tasks", "📅 Today", "⭐ Important"},
+            {"LISTS", "📁 Personal", "💼 Work", "🎓 Study"},
+            {"TOOLS", "⏱️ Pomodoro", "📊 Dashboard", "📈 Statistics"}
+        };
 
-        // Dashboard button
-        dashboardButton = new JButton("📊 Dashboard");
-        styleButton(dashboardButton, false);
-        dashboardButton.addActionListener(e -> {
-            showPanel("DASHBOARD");
-            updateSelectedButton(dashboardButton);
-        });
+        for (String[] section : sections) {
+            // Add section header
+            JLabel sectionLabel = new JLabel(section[0]);
+            sectionLabel.setFont(new Font("Segoe UI", Font.BOLD, 12));
+            sectionLabel.setForeground(new Color(145, 145, 145));
+            sectionLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+            panel.add(sectionLabel);
+            panel.add(Box.createVerticalStrut(10));
 
-        // Add buttons to panel with spacing
-        panel.add(tasksButton);
-        panel.add(Box.createVerticalStrut(10));
-        panel.add(pomodoroButton);
-        panel.add(Box.createVerticalStrut(10));
-        panel.add(dashboardButton);
+            // Add section items
+            for (int i = 1; i < section.length; i++) {
+                JButton button = new JButton(section[i]);
+                styleNavigationButton(button);
+                panel.add(button);
+                panel.add(Box.createVerticalStrut(5));
+            }
+            panel.add(Box.createVerticalStrut(20));
+        }
+
         panel.add(Box.createVerticalGlue());
 
+        // Add separator before logout
+        JSeparator separator = new JSeparator(JSeparator.HORIZONTAL);
+        separator.setForeground(BORDER_COLOR);
+        separator.setBackground(SIDEBAR_COLOR);
+        separator.setMaximumSize(new Dimension(Integer.MAX_VALUE, 1));
+        panel.add(separator);
+        panel.add(Box.createVerticalStrut(15));
+
+        // Add logout button at the bottom
+        JButton logoutButton = new JButton();
+        logoutButton.setLayout(new BorderLayout(10, 0));
+        
+        // Create door icon panel
+        JPanel doorIconPanel = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2d = (Graphics2D) g;
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                
+                // Door frame
+                g2d.setColor(new Color(255, 89, 89));
+                g2d.setStroke(new BasicStroke(1.5f));
+                g2d.drawRect(2, 0, 12, 16);
+                
+                // Door handle
+                g2d.fillOval(11, 7, 4, 4);
+                
+                // Arrow
+                int[] xPoints = {2, 2, 8};
+                int[] yPoints = {6, 10, 8};
+                g2d.fillPolygon(xPoints, yPoints, 3);
+            }
+            
+            @Override
+            public Dimension getPreferredSize() {
+                return new Dimension(18, 16);
+            }
+        };
+        doorIconPanel.setOpaque(false);
+        
+        // Create text label
+        JLabel textLabel = new JLabel("Logout");
+        textLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        textLabel.setForeground(new Color(255, 89, 89));
+        
+        // Add components to button
+        JPanel buttonContent = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 0));
+        buttonContent.setOpaque(false);
+        buttonContent.add(doorIconPanel);
+        buttonContent.add(textLabel);
+        
+        logoutButton.add(buttonContent, BorderLayout.CENTER);
+        styleNavigationButton(logoutButton);
+        
+        // Override the default style for logout button
+        logoutButton.setBorder(BorderFactory.createEmptyBorder(8, 12, 8, 12));
+        logoutButton.addActionListener(e -> {
+            int choice = JOptionPane.showConfirmDialog(
+                this,
+                "Are you sure you want to logout?",
+                "Confirm Logout",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.QUESTION_MESSAGE
+            );
+            
+            if (choice == JOptionPane.YES_OPTION) {
+                dispose();
+                new UserSelectionView(username -> new LoginView(username).setVisible(true)).setVisible(true);
+            }
+        });
+        
+        logoutButton.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                logoutButton.setBackground(new Color(255, 235, 235)); // Light red background on hover
+                buttonContent.setBackground(new Color(255, 235, 235));
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                logoutButton.setBackground(SIDEBAR_COLOR);
+                buttonContent.setBackground(SIDEBAR_COLOR);
+            }
+        });
+
+        panel.add(logoutButton);
+
         return panel;
+    }
+
+    private void styleNavigationButton(JButton button) {
+        button.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        button.setForeground(TEXT_COLOR);
+        button.setBackground(SIDEBAR_COLOR);
+        button.setBorder(BorderFactory.createEmptyBorder(8, 12, 8, 12));
+        button.setHorizontalAlignment(SwingConstants.LEFT);
+        button.setAlignmentX(Component.LEFT_ALIGNMENT);
+        button.setMaximumSize(new Dimension(Integer.MAX_VALUE, button.getPreferredSize().height));
+        button.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        button.setFocusPainted(false);
+
+        button.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                button.setBackground(HOVER_COLOR);
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                button.setBackground(SIDEBAR_COLOR);
+            }
+        });
     }
 
     private void updateSelectedButton(JButton selectedButton) {
@@ -657,197 +771,270 @@ public class TaskFrame extends JFrame {
 
     private JPanel createHeaderPanel() {
         JPanel panel = new JPanel(new BorderLayout());
-        panel.setBackground(CARD_COLOR);
-        panel.setBorder(new EmptyBorder(15, 15, 15, 15));
+        panel.setBackground(BACKGROUND_COLOR);
+        panel.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createMatteBorder(0, 0, 1, 0, BORDER_COLOR),
+            BorderFactory.createEmptyBorder(10, 20, 10, 20)
+        ));
 
-        // Create a left panel for title
+        // Left section with title
         JLabel titleLabel = new JLabel("Tasks");
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
         titleLabel.setForeground(TEXT_COLOR);
         panel.add(titleLabel, BorderLayout.WEST);
 
-        // Create a right panel for buttons
-        JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
-        rightPanel.setBackground(CARD_COLOR);
+        // Right section with user profile and logout
+        JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 15, 0));
+        rightPanel.setBackground(BACKGROUND_COLOR);
 
-        // Add button
-        addButton = new JButton("+");
-        styleButton(addButton, true);
-        addButton.setFont(new Font("Segoe UI", Font.BOLD, 18));
-        addButton.setPreferredSize(new Dimension(40, 40));
-        addButton.addActionListener(e -> handleAddTask());
+        // User profile button
+        JButton profileButton = new JButton();
+        profileButton.setLayout(new BorderLayout());
+        
+        // Create circular avatar
+        JPanel avatarPanel = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2d = (Graphics2D) g;
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2d.setColor(PRIMARY_COLOR);
+                g2d.fillOval(0, 0, getWidth(), getHeight());
+                g2d.setColor(Color.WHITE);
+                g2d.setFont(new Font("Segoe UI", Font.BOLD, 14));
+                String initial = "U"; // You can set this based on the user's name
+                FontMetrics fm = g2d.getFontMetrics();
+                int x = (getWidth() - fm.stringWidth(initial)) / 2;
+                int y = ((getHeight() - fm.getHeight()) / 2) + fm.getAscent();
+                g2d.drawString(initial, x, y);
+            }
+            
+            @Override
+            public Dimension getPreferredSize() {
+                return new Dimension(32, 32);
+            }
+        };
+        avatarPanel.setOpaque(false);
+        
+        profileButton.add(avatarPanel, BorderLayout.CENTER);
+        profileButton.setPreferredSize(new Dimension(32, 32));
+        profileButton.setBorderPainted(false);
+        profileButton.setContentAreaFilled(false);
+        profileButton.setFocusPainted(false);
+        profileButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
-        // Logout button
-        JButton logoutButton = new JButton("Logout");
-        styleButton(logoutButton, false);
-        logoutButton.addActionListener(e -> {
-            dispose();
-            new UserSelectionView(username -> new LoginView(username).setVisible(true)).setVisible(true);
+        // Create popup menu for profile button
+        JPopupMenu profileMenu = new JPopupMenu();
+        profileMenu.setBorder(BorderFactory.createLineBorder(BORDER_COLOR));
+        
+        // Add menu items
+        JMenuItem settingsItem = new JMenuItem("Settings");
+        JMenuItem logoutItem = new JMenuItem("Logout");
+        
+        // Style menu items
+        styleMenuItem(settingsItem);
+        styleMenuItem(logoutItem);
+        
+        // Add action listener for logout
+        logoutItem.addActionListener(e -> {
+            int choice = JOptionPane.showConfirmDialog(
+                this,
+                "Are you sure you want to logout?",
+                "Confirm Logout",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.QUESTION_MESSAGE
+            );
+            
+            if (choice == JOptionPane.YES_OPTION) {
+                dispose();
+                new UserSelectionView(username -> new LoginView(username).setVisible(true)).setVisible(true);
+            }
+        });
+        
+        profileMenu.add(settingsItem);
+        profileMenu.addSeparator();
+        profileMenu.add(logoutItem);
+        
+        // Show popup menu on profile button click
+        profileButton.addActionListener(e -> {
+            profileMenu.show(profileButton, 0, profileButton.getHeight());
         });
 
-        rightPanel.add(logoutButton);
-        rightPanel.add(addButton);
+        rightPanel.add(profileButton);
         panel.add(rightPanel, BorderLayout.EAST);
 
         return panel;
     }
 
+    private void styleMenuItem(JMenuItem item) {
+        item.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        item.setBackground(BACKGROUND_COLOR);
+        item.setForeground(TEXT_COLOR);
+        item.setBorder(BorderFactory.createEmptyBorder(8, 15, 8, 15));
+        
+        item.addChangeListener(e -> {
+            if (item.isArmed()) {
+                item.setBackground(HOVER_COLOR);
+            } else {
+                item.setBackground(BACKGROUND_COLOR);
+            }
+        });
+    }
+
     private JPanel createTaskDetailsPanel() {
-        JPanel panel = new JPanel();
-        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-        panel.setBackground(CARD_COLOR);
-        panel.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(BORDER_COLOR),
-            new EmptyBorder(20, 20, 20, 20)
-        ));
+        JPanel panel = new JPanel(new BorderLayout(0, 20));
+        panel.setBackground(BACKGROUND_COLOR);
+        panel.setBorder(BorderFactory.createEmptyBorder(20, 30, 20, 30));
 
-        // Title
-        JLabel titleLabel = new JLabel("Title");
-        titleLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        titleLabel.setForeground(TEXT_COLOR);
-        panel.add(titleLabel);
-        panel.add(Box.createVerticalStrut(5));
-
+        // Top section with title and actions
+        JPanel topSection = new JPanel(new BorderLayout(15, 0));
+        topSection.setBackground(BACKGROUND_COLOR);
+        
+        // Title field
         titleField = new JTextField();
+        titleField.setFont(new Font("Segoe UI", Font.BOLD, 20));
         styleTextField(titleField);
-        panel.add(titleField);
-        panel.add(Box.createVerticalStrut(15));
+        topSection.add(titleField, BorderLayout.CENTER);
 
-        // Description
-        JLabel descLabel = new JLabel("Description");
-        descLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        descLabel.setForeground(TEXT_COLOR);
-        panel.add(descLabel);
-        panel.add(Box.createVerticalStrut(5));
-
-        descriptionField = new JTextArea();
-        descriptionField.setLineWrap(true);
-        descriptionField.setWrapStyleWord(true);
-        styleTextArea(descriptionField);
-        JScrollPane scrollPane = new JScrollPane(descriptionField);
-        scrollPane.setPreferredSize(new Dimension(300, 100));
-        scrollPane.setBorder(BorderFactory.createLineBorder(BORDER_COLOR));
-        panel.add(scrollPane);
-        panel.add(Box.createVerticalStrut(15));
-
-        // Status
-        JLabel statusLabel = new JLabel("Status");
-        statusLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        statusLabel.setForeground(TEXT_COLOR);
-        panel.add(statusLabel);
-        panel.add(Box.createVerticalStrut(5));
-
-        statusComboBox = new JComboBox<>(new String[]{"pending", "in progress", "completed"});
-        styleComboBox(statusComboBox);
-        panel.add(statusComboBox);
-        panel.add(Box.createVerticalStrut(15));
-
-        // Due Date
-        JLabel dueDateLabel = new JLabel("Due Date");
-        dueDateLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        dueDateLabel.setForeground(TEXT_COLOR);
-        panel.add(dueDateLabel);
-        panel.add(Box.createVerticalStrut(5));
-
-        dueDateSpinner = new JSpinner(new SpinnerDateModel());
-        JSpinner.DateEditor dateEditor = new JSpinner.DateEditor(dueDateSpinner, "MMM d, yyyy");
-        dueDateSpinner.setEditor(dateEditor);
-        styleDateSpinner(dueDateSpinner);
-        panel.add(dueDateSpinner);
-        panel.add(Box.createVerticalStrut(20));
-
-        // Buttons
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
-        buttonPanel.setBackground(CARD_COLOR);
-
-        JButton saveButton = new JButton("Save Changes");
-        styleButton(saveButton, true);
-        saveButton.addActionListener(e -> handleUpdateTask());
-        buttonPanel.add(saveButton);
-
-        buttonPanel.add(Box.createHorizontalStrut(10));
-
+        // Action buttons
+        JPanel actionButtons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        actionButtons.setBackground(BACKGROUND_COLOR);
+        
+        addButton = new JButton("Save");
         deleteButton = new JButton("Delete");
+        styleButton(addButton, true);
         styleButton(deleteButton, false);
-        deleteButton.addActionListener(e -> handleDeleteTask());
-        buttonPanel.add(deleteButton);
+        
+        actionButtons.add(deleteButton);
+        actionButtons.add(addButton);
+        topSection.add(actionButtons, BorderLayout.EAST);
 
-        panel.add(buttonPanel);
+        // Main content panel
+        JPanel contentPanel = new JPanel();
+        contentPanel.setLayout(new BoxLayout(contentPanel, BoxLayout.Y_AXIS));
+        contentPanel.setBackground(BACKGROUND_COLOR);
+
+        // Description section
+        JPanel descriptionSection = createDetailSection("Description");
+        descriptionField = new JTextArea(5, 20);
+        styleTextArea(descriptionField);
+        JScrollPane descScrollPane = new JScrollPane(descriptionField);
+        descScrollPane.setBorder(null);
+        descriptionSection.add(descScrollPane);
+        contentPanel.add(descriptionSection);
+        contentPanel.add(Box.createVerticalStrut(20));
+
+        // Due date section
+        JPanel dateSection = createDetailSection("Due Date");
+        dueDateSpinner = new JSpinner(new SpinnerDateModel());
+        styleDateSpinner(dueDateSpinner);
+        dateSection.add(dueDateSpinner);
+        contentPanel.add(dateSection);
+        contentPanel.add(Box.createVerticalStrut(20));
+
+        // Status section
+        JPanel statusSection = createDetailSection("Status");
+        String[] statuses = {"Not Started", "In Progress", "Completed"};
+        statusComboBox = new JComboBox<>(statuses);
+        styleComboBox(statusComboBox);
+        statusSection.add(statusComboBox);
+        contentPanel.add(statusSection);
+
+        // Add components to main panel
+        panel.add(topSection, BorderLayout.NORTH);
+        panel.add(contentPanel, BorderLayout.CENTER);
 
         return panel;
     }
 
+    private JPanel createDetailSection(String title) {
+        JPanel section = new JPanel();
+        section.setLayout(new BoxLayout(section, BoxLayout.Y_AXIS));
+        section.setBackground(BACKGROUND_COLOR);
+        section.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JLabel titleLabel = new JLabel(title);
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        titleLabel.setForeground(new Color(115, 115, 115));
+        titleLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 10, 0));
+        
+        section.add(titleLabel);
+        return section;
+    }
+
     private void styleTextField(JTextField field) {
-        field.setPreferredSize(new Dimension(300, 35));
-        field.setMaximumSize(new Dimension(2000, 35));
-        field.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        field.setBackground(Color.WHITE);
-        field.setForeground(TEXT_COLOR);
+        field.setBackground(BACKGROUND_COLOR);
         field.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(BORDER_COLOR),
-            BorderFactory.createEmptyBorder(5, 10, 5, 10)
+            BorderFactory.createMatteBorder(0, 0, 1, 0, BORDER_COLOR),
+            BorderFactory.createEmptyBorder(5, 0, 5, 0)
         ));
+        field.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        field.setForeground(TEXT_COLOR);
     }
 
     private void styleTextArea(JTextArea area) {
+        area.setBackground(BACKGROUND_COLOR);
+        area.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(BORDER_COLOR),
+            BorderFactory.createEmptyBorder(10, 10, 10, 10)
+        ));
         area.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        area.setBackground(Color.WHITE);
         area.setForeground(TEXT_COLOR);
-        area.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
+        area.setLineWrap(true);
+        area.setWrapStyleWord(true);
     }
 
     private void styleButton(JButton button, boolean isPrimary) {
         button.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        button.setBackground(isPrimary ? PRIMARY_COLOR : Color.WHITE);
-        button.setForeground(isPrimary ? Color.WHITE : PRIMARY_COLOR);
+        button.setForeground(isPrimary ? Color.WHITE : TEXT_COLOR);
+        button.setBackground(isPrimary ? PRIMARY_COLOR : BACKGROUND_COLOR);
         button.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(isPrimary ? PRIMARY_COLOR : BORDER_COLOR),
-            BorderFactory.createEmptyBorder(8, 20, 8, 20)
+            BorderFactory.createEmptyBorder(8, 16, 8, 16)
         ));
         button.setFocusPainted(false);
         button.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
         button.addMouseListener(new MouseAdapter() {
-            public void mouseEntered(MouseEvent evt) {
+            @Override
+            public void mouseEntered(MouseEvent e) {
                 if (isPrimary) {
-                    button.setBackground(new Color(0, 99, 177));
+                    button.setBackground(button.getBackground().darker());
                 } else {
                     button.setBackground(HOVER_COLOR);
                 }
             }
-            public void mouseExited(MouseEvent evt) {
-                button.setBackground(isPrimary ? PRIMARY_COLOR : Color.WHITE);
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                button.setBackground(isPrimary ? PRIMARY_COLOR : BACKGROUND_COLOR);
             }
         });
     }
 
     private void styleComboBox(JComboBox<?> comboBox) {
-        comboBox.setPreferredSize(new Dimension(300, 35));
-        comboBox.setMaximumSize(new Dimension(2000, 35));
+        comboBox.setBackground(BACKGROUND_COLOR);
         comboBox.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        comboBox.setBackground(Color.WHITE);
         comboBox.setForeground(TEXT_COLOR);
-        ((JComponent) comboBox.getRenderer()).setBackground(Color.WHITE);
         comboBox.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(BORDER_COLOR),
             BorderFactory.createEmptyBorder(5, 10, 5, 10)
         ));
+        ((JComponent) comboBox.getRenderer()).setBackground(BACKGROUND_COLOR);
     }
 
     private void styleDateSpinner(JSpinner spinner) {
-        spinner.setPreferredSize(new Dimension(300, 35));
-        spinner.setMaximumSize(new Dimension(2000, 35));
-        spinner.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        JComponent editor = spinner.getEditor();
-        if (editor instanceof JSpinner.DefaultEditor) {
-            JTextField tf = ((JSpinner.DefaultEditor) editor).getTextField();
-            tf.setBackground(Color.WHITE);
-            tf.setForeground(TEXT_COLOR);
-            tf.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(BORDER_COLOR),
-                BorderFactory.createEmptyBorder(5, 10, 5, 10)
-            ));
-        }
+        spinner.setBackground(BACKGROUND_COLOR);
+        spinner.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(BORDER_COLOR),
+            BorderFactory.createEmptyBorder(5, 10, 5, 10)
+        ));
+        
+        JSpinner.DateEditor editor = new JSpinner.DateEditor(spinner, "MMM d, yyyy");
+        spinner.setEditor(editor);
+        editor.getTextField().setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        editor.getTextField().setForeground(TEXT_COLOR);
+        editor.getTextField().setBackground(BACKGROUND_COLOR);
     }
 
     private void loadTasks() {
@@ -947,49 +1134,38 @@ public class TaskFrame extends JFrame {
                 boolean isSelected, boolean cellHasFocus) {
             
             Task task = (Task) value;
-            JPanel panel = new JPanel(new BorderLayout());
-            panel.setBorder(new EmptyBorder(10, 15, 10, 15));
+            JPanel panel = new JPanel(new BorderLayout(10, 0));
+            panel.setBorder(BorderFactory.createEmptyBorder(8, 15, 8, 15));
             
             if (isSelected) {
                 panel.setBackground(HOVER_COLOR);
-                } else {
-                panel.setBackground(CARD_COLOR);
+            } else {
+                panel.setBackground(BACKGROUND_COLOR);
             }
 
-            // Title and status
-            JPanel titlePanel = new JPanel(new BorderLayout());
-            titlePanel.setBackground(panel.getBackground());
-            
+            // Checkbox for completion status
+            JCheckBox checkbox = new JCheckBox();
+            checkbox.setSelected("Completed".equals(task.getStatus()));
+            checkbox.setBackground(panel.getBackground());
+            panel.add(checkbox, BorderLayout.WEST);
+
+            // Task details panel
+            JPanel detailsPanel = new JPanel(new GridLayout(2, 1, 0, 2));
+            detailsPanel.setBackground(panel.getBackground());
+
+            // Task title
             JLabel titleLabel = new JLabel(task.getTitle());
             titleLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
             titleLabel.setForeground(TEXT_COLOR);
-            titlePanel.add(titleLabel, BorderLayout.CENTER);
+            
+            // Task metadata (due date, etc)
+            JLabel metaLabel = new JLabel(formatDueDate(task.getDueDate()));
+            metaLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+            metaLabel.setForeground(new Color(145, 145, 145));
 
-            // Status indicator
-            JLabel statusLabel = new JLabel("●");
-            statusLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
-            switch (task.getStatus().toLowerCase()) {
-                case "completed":
-                    statusLabel.setForeground(COMPLETED_COLOR);
-                    break;
-                case "in progress":
-                    statusLabel.setForeground(PRIMARY_COLOR);
-                    break;
-                default:
-                    statusLabel.setForeground(PENDING_COLOR);
-            }
-            titlePanel.add(statusLabel, BorderLayout.WEST);
-            titlePanel.add(Box.createHorizontalStrut(10), BorderLayout.EAST);
-
-            panel.add(titlePanel, BorderLayout.CENTER);
-
-            // Due date
-            if (task.getDueDate() != null) {
-                JLabel dateLabel = new JLabel(String.format("%tB %<td", task.getDueDate()));
-                dateLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-                dateLabel.setForeground(new Color(117, 117, 117));
-                panel.add(dateLabel, BorderLayout.EAST);
-            }
+            detailsPanel.add(titleLabel);
+            detailsPanel.add(metaLabel);
+            panel.add(detailsPanel, BorderLayout.CENTER);
 
             return panel;
         }
@@ -997,20 +1173,47 @@ public class TaskFrame extends JFrame {
 
     private JPanel createTaskListPanel() {
         JPanel panel = new JPanel(new BorderLayout());
-        panel.setPreferredSize(new Dimension(300, 0));
-        panel.setBackground(CARD_COLOR);
-        panel.setBorder(BorderFactory.createMatteBorder(0, 0, 0, 1, BORDER_COLOR));
+        panel.setBackground(BACKGROUND_COLOR);
+        panel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 1));
 
-        // Add header
-        panel.add(createHeaderPanel(), BorderLayout.NORTH);
+        // Create header with search
+        JPanel headerPanel = new JPanel(new BorderLayout());
+        headerPanel.setBackground(BACKGROUND_COLOR);
+        headerPanel.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createMatteBorder(0, 0, 1, 0, BORDER_COLOR),
+            BorderFactory.createEmptyBorder(15, 20, 15, 20)
+        ));
 
-        // Add task list with scroll
+        // Add search field
+        JTextField searchField = new JTextField();
+        searchField.setPreferredSize(new Dimension(200, 35));
+        styleSearchField(searchField);
+        headerPanel.add(searchField, BorderLayout.CENTER);
+
+        // Task list with custom renderer
+        taskList.setBackground(BACKGROUND_COLOR);
+        taskList.setBorder(null);
+        taskList.setFixedCellHeight(60);
+        
         JScrollPane scrollPane = new JScrollPane(taskList);
         scrollPane.setBorder(null);
-        scrollPane.setBackground(CARD_COLOR);
+        scrollPane.getViewport().setBackground(BACKGROUND_COLOR);
+
+        panel.add(headerPanel, BorderLayout.NORTH);
         panel.add(scrollPane, BorderLayout.CENTER);
 
         return panel;
+    }
+
+    private void styleSearchField(JTextField field) {
+        field.setBackground(HOVER_COLOR);
+        field.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(BORDER_COLOR),
+            BorderFactory.createEmptyBorder(5, 10, 5, 10)
+        ));
+        field.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        field.setForeground(TEXT_COLOR);
+        field.putClientProperty("JTextField.placeholderText", "Search tasks...");
     }
 
     private void showPanel(String name) {
