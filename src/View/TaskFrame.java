@@ -2582,11 +2582,6 @@ public class TaskFrame extends JFrame {
                         taskPanel.add(colorBar, BorderLayout.WEST);
                         taskPanel.add(taskLabel, BorderLayout.CENTER);
                         
-                        // Add completed task strikethrough
-                        if (status.contains("completed") || status.equals("done")) {
-                            taskLabel.setText("<html><strike>" + task.getTitle() + "</strike></html>");
-                        }
-                        
                         // Make task panel clickable to view task details
                         final Task finalTask = task;
                         taskPanel.addMouseListener(new MouseAdapter() {
