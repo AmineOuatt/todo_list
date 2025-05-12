@@ -1,5 +1,6 @@
 package View;
 
+import java.awt.BasicStroke;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
@@ -18,6 +19,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.awt.geom.Ellipse2D;
 import java.util.List;
 
 import javax.swing.BorderFactory;
@@ -90,12 +92,66 @@ public class UserSelectionView extends JFrame {
                           STANDARD_PADDING, STANDARD_PADDING)
         ));
 
-        // Logo
-        JLabel logoLabel = new JLabel("✓", SwingConstants.CENTER);
-        logoLabel.setFont(new Font("Segoe UI", Font.BOLD, 64)); // Larger logo for fullscreen
-        logoLabel.setForeground(ACCENT_COLOR);
-        logoLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-        centerPanel.add(logoLabel);
+        // Logo - improved checkmark icon
+        JPanel logoPanel = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2d = (Graphics2D) g;
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                
+                // Draw circular background with gradient effect
+                int size = Math.min(getWidth(), getHeight()) - 20;
+                int x = (getWidth() - size) / 2;
+                int y = (getHeight() - size) / 2;
+                
+                // Create gradient for a 3D effect
+                Color lighterAccent = new Color(
+                    Math.min(ACCENT_COLOR.getRed() + 40, 255),
+                    Math.min(ACCENT_COLOR.getGreen() + 40, 255),
+                    Math.min(ACCENT_COLOR.getBlue() + 40, 255)
+                );
+                
+                g2d.setColor(lighterAccent);
+                g2d.fillOval(x, y, size, size);
+                
+                // Add slight shadow for depth
+                g2d.setColor(new Color(0, 0, 0, 30));
+                g2d.fillOval(x + 3, y + 3, size, size);
+                
+                // Main circle
+                g2d.setColor(ACCENT_COLOR);
+                g2d.fillOval(x, y, size, size);
+                
+                // Draw improved checkmark with thicker stroke
+                g2d.setColor(Color.WHITE);
+                g2d.setStroke(new BasicStroke(8f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+                
+                // Adjust checkmark positioning for better appearance
+                int startX = x + size / 4;
+                int startY = y + size / 2 + size / 12;
+                int middleX = x + size / 2 - size / 12;
+                int middleY = y + size * 3/4;
+                int endX = x + size * 3/4 + size / 12;
+                int endY = y + size / 3;
+                
+                g2d.drawLine(startX, startY, middleX, middleY);
+                g2d.drawLine(middleX, middleY, endX, endY);
+                
+                // Add highlight for a glossy effect
+                g2d.setClip(new java.awt.geom.Ellipse2D.Float(x, y, size, size));
+                g2d.setPaint(new Color(255, 255, 255, 60));
+                g2d.fillOval(x + size/4, y - size/6, size, size/3);
+            }
+            
+            @Override
+            public Dimension getPreferredSize() {
+                return new Dimension(100, 100);
+            }
+        };
+        logoPanel.setOpaque(false);
+        logoPanel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        centerPanel.add(logoPanel);
         centerPanel.add(Box.createVerticalStrut(STANDARD_PADDING * 2));
 
         // Title

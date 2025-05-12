@@ -202,18 +202,7 @@ public class TaskFrame extends JFrame {
                 titlePanel.setAlignmentX(Component.LEFT_ALIGNMENT);
                 
                 // Status indicator icon
-                JLabel statusIcon = new JLabel();
-                if ("Completed".equals(task.getStatus())) {
-                    statusIcon.setText("✓");
-                    statusIcon.setForeground(COMPLETED_COLOR);
-                } else if ("In Progress".equals(task.getStatus())) {
-                    statusIcon.setText("►");
-                    statusIcon.setForeground(PRIMARY_COLOR);
-                } else {
-                    statusIcon.setText("○");
-                    statusIcon.setForeground(PENDING_COLOR);
-                }
-                statusIcon.setFont(new Font("Segoe UI", Font.BOLD, 16));
+                JLabel statusIcon = new JLabel(createStatusIcon(task.getStatus()));
                 titlePanel.add(statusIcon, BorderLayout.WEST);
                 
                 // Title
@@ -275,10 +264,19 @@ public class TaskFrame extends JFrame {
                 
                 // Category if available
                 if (task.getCategory() != null) {
-                    JLabel categoryLabel = new JLabel("• " + task.getCategory().getName());
+                    JPanel categoryPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
+                    categoryPanel.setBackground(leftMeta.getBackground());
+                    
+                    // Create custom bullet icon
+                    JLabel bulletIcon = new JLabel(createBulletIcon());
+                    categoryPanel.add(bulletIcon);
+                    
+                    JLabel categoryLabel = new JLabel(task.getCategory().getName());
                     categoryLabel.setFont(new Font("Segoe UI", Font.PLAIN, 11));
                     categoryLabel.setForeground(PRIMARY_COLOR);
-                    leftMeta.add(categoryLabel);
+                    categoryPanel.add(categoryLabel);
+                    
+                    leftMeta.add(categoryPanel);
                 }
                 
                 metaPanel.add(leftMeta, BorderLayout.WEST);
@@ -469,12 +467,32 @@ public class TaskFrame extends JFrame {
         panel.add(logoLabel);
         panel.add(Box.createVerticalStrut(25));
 
-        // Create simplified navigation with four options including Notes
-        String[] navItems = {"📝 Tasks", "⏱️ Pomodoro", "📊 Dashboard", "📅 Calendar", "📝 Notes"};
+        // Create navigation options with custom icons instead of Unicode
+        String[] navLabels = {"Tasks", "Pomodoro", "Dashboard", "Calendar", "Notes"};
         String[] navActions = {"TASKS", "POMODORO", "DASHBOARD", "CALENDAR", "NOTES"};
 
-        for (int i = 0; i < navItems.length; i++) {
-            JButton button = new JButton(navItems[i]);
+        for (int i = 0; i < navLabels.length; i++) {
+            JButton button = new JButton(navLabels[i]);
+            
+            // Set appropriate icon based on button type
+            switch (i) {
+                case 0: // Tasks
+                    button.setIcon(createTaskIcon());
+                    break;
+                case 1: // Pomodoro
+                    button.setIcon(createPomodoroIcon());
+                    break;
+                case 2: // Dashboard
+                    button.setIcon(createDashboardIcon());
+                    break;
+                case 3: // Calendar
+                    button.setIcon(createCalendarIcon());
+                    break;
+                case 4: // Notes
+                    button.setIcon(createNoteIcon());
+                    break;
+            }
+            
             styleNavigationButton(button);
             final String action = navActions[i];
             button.addActionListener(e -> showPanel(action));
@@ -505,84 +523,24 @@ public class TaskFrame extends JFrame {
         panel.add(separator);
         panel.add(Box.createVerticalStrut(15));
 
-        // Add logout button at the bottom
+        // Add logout button at the bottom with custom icon
         JButton logoutButton = new JButton();
         logoutButton.setLayout(new BorderLayout(10, 0));
         
-        // Create door icon panel
-        JPanel doorIconPanel = new JPanel() {
-            @Override
-            protected void paintComponent(Graphics g) {
-                super.paintComponent(g);
-                Graphics2D g2d = (Graphics2D) g;
-                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                
-                // Door frame
-                g2d.setColor(new Color(255, 89, 89));
-                g2d.setStroke(new BasicStroke(1.5f));
-                g2d.drawRect(2, 0, 12, 16);
-                
-                // Door handle
-                g2d.fillOval(11, 7, 4, 4);
-                
-                // Arrow
-                int[] xPoints = {2, 2, 8};
-                int[] yPoints = {6, 10, 8};
-                g2d.fillPolygon(xPoints, yPoints, 3);
-            }
-            
-            @Override
-            public Dimension getPreferredSize() {
-                return new Dimension(18, 16);
-            }
-        };
-        doorIconPanel.setOpaque(false);
+        // Replace door icon panel implementation with custom-drawn icon
+        logoutButton.setIcon(createLogoutIcon());
         
         // Create text label
         JLabel textLabel = new JLabel("Logout");
         textLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         textLabel.setForeground(new Color(255, 89, 89));
         
-        // Add components to button
-        JPanel buttonContent = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 0));
-        buttonContent.setOpaque(false);
-        buttonContent.add(doorIconPanel);
-        buttonContent.add(textLabel);
-        
-        logoutButton.add(buttonContent, BorderLayout.CENTER);
+        logoutButton.add(textLabel, BorderLayout.CENTER);
         styleNavigationButton(logoutButton);
         
         // Override the default style for logout button
         logoutButton.setBorder(BorderFactory.createEmptyBorder(8, 12, 8, 12));
-        logoutButton.addActionListener(e -> {
-            int choice = JOptionPane.showConfirmDialog(
-                this,
-                "Are you sure you want to logout?",
-                "Confirm Logout",
-                JOptionPane.YES_NO_OPTION,
-                JOptionPane.QUESTION_MESSAGE
-            );
-            
-            if (choice == JOptionPane.YES_OPTION) {
-                dispose();
-                new UserSelectionView(username -> new LoginView(username).setVisible(true)).setVisible(true);
-            }
-        });
-        
-        logoutButton.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                logoutButton.setBackground(new Color(255, 235, 235)); // Light red background on hover
-                buttonContent.setBackground(new Color(255, 235, 235));
-            }
-
-            @Override
-            public void mouseExited(MouseEvent e) {
-                logoutButton.setBackground(SIDEBAR_COLOR);
-                buttonContent.setBackground(SIDEBAR_COLOR);
-            }
-        });
-
+        logoutButton.addActionListener(e -> logout());
         panel.add(logoutButton);
 
         return panel;
@@ -1447,7 +1405,8 @@ public class TaskFrame extends JFrame {
         headerPanel.add(titleLabel, BorderLayout.WEST);
         
         // Refresh button
-        JButton refreshButton = new JButton("↻ Refresh Dashboard");
+        JButton refreshButton = new JButton("Refresh Dashboard");
+        refreshButton.setIcon(createRefreshIcon());
         refreshButton.setFont(new Font("Segoe UI", Font.BOLD, 14));
         refreshButton.setFocusPainted(false);
         refreshButton.setBackground(PRIMARY_COLOR);
@@ -1888,14 +1847,13 @@ public class TaskFrame extends JFrame {
         buttonsPanel.setBackground(SIDEBAR_COLOR);
         
         // Refresh button
-        JButton refreshButton = new JButton("↻");
-        refreshButton.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        JButton refreshButton = new JButton();
+        refreshButton.setIcon(createRefreshIcon());
+        refreshButton.setToolTipText("Refresh Tasks");
         refreshButton.setFocusPainted(false);
         refreshButton.setContentAreaFilled(false);
         refreshButton.setBorderPainted(false);
-        refreshButton.setToolTipText("Refresh Tasks");
         refreshButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        refreshButton.setForeground(PRIMARY_COLOR);
         refreshButton.addActionListener(e -> {
             loadTasks();
             JOptionPane.showMessageDialog(this, "Tasks refreshed!", "Refresh", JOptionPane.INFORMATION_MESSAGE);
@@ -1919,17 +1877,6 @@ public class TaskFrame extends JFrame {
         
         headerPanel.add(titleButtonPanel, BorderLayout.NORTH);
         
-        // Add help message about double-clicking
-        JPanel helpPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 5));
-        helpPanel.setBackground(SIDEBAR_COLOR);
-        
-        JLabel helpLabel = new JLabel("💡 Double-click a task to toggle completion status");
-        helpLabel.setFont(new Font("Segoe UI", Font.ITALIC, 11));
-        helpLabel.setForeground(new Color(120, 120, 120));
-        helpPanel.add(helpLabel);
-        
-        headerPanel.add(helpPanel, BorderLayout.SOUTH);
-
         // Search field below the title
         JPanel searchPanel = new JPanel(new BorderLayout(5, 0));
         searchPanel.setBackground(SIDEBAR_COLOR);
@@ -2482,14 +2429,13 @@ public class TaskFrame extends JFrame {
         buttonsPanel.setBackground(SIDEBAR_COLOR);
         
         // Refresh button
-        JButton refreshButton = new JButton("↻");
-        refreshButton.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        JButton refreshButton = new JButton();
+        refreshButton.setIcon(createRefreshIcon());
+        refreshButton.setToolTipText("Refresh Notes");
         refreshButton.setFocusPainted(false);
         refreshButton.setContentAreaFilled(false);
         refreshButton.setBorderPainted(false);
-        refreshButton.setToolTipText("Refresh Notes");
         refreshButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        refreshButton.setForeground(PRIMARY_COLOR);
         refreshButton.addActionListener(e -> {
             loadNotes();
             JOptionPane.showMessageDialog(this, "Notes refreshed!", "Refresh", JOptionPane.INFORMATION_MESSAGE);
@@ -2636,10 +2582,19 @@ public class TaskFrame extends JFrame {
                 headerRow.add(titleLabel, BorderLayout.WEST);
                 
                 if (note.getCategory() != null) {
+                    JPanel categoryWrapper = new JPanel(new FlowLayout(FlowLayout.RIGHT, 5, 0));
+                    categoryWrapper.setBackground(headerRow.getBackground());
+                    
+                    // Add bullet point icon
+                    JLabel bulletIcon = new JLabel(createBulletIcon());
+                    categoryWrapper.add(bulletIcon);
+                    
                     JLabel categoryLabel = new JLabel(note.getCategory().getName());
                     categoryLabel.setFont(new Font("Segoe UI", Font.ITALIC, 12));
                     categoryLabel.setForeground(PRIMARY_COLOR);
-                    headerRow.add(categoryLabel, BorderLayout.EAST);
+                    categoryWrapper.add(categoryLabel);
+                    
+                    headerRow.add(categoryWrapper, BorderLayout.EAST);
                 }
                 
                 panel.add(headerRow, BorderLayout.NORTH);
@@ -3091,5 +3046,372 @@ public class TaskFrame extends JFrame {
                 JOptionPane.showMessageDialog(this, "Failed to delete note", "Error", JOptionPane.ERROR_MESSAGE);
             }
         }
+    }
+
+    // Custom status icons for task list
+    private Icon createStatusIcon(String status) {
+        return new Icon() {
+            @Override
+            public void paintIcon(Component c, Graphics g, int x, int y) {
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                
+                if ("Completed".equals(status)) {
+                    // Checkmark icon
+                    g2d.setColor(COMPLETED_COLOR);
+                    g2d.setStroke(new BasicStroke(2f));
+                    g2d.drawLine(x + 3, y + 8, x + 6, y + 12);
+                    g2d.drawLine(x + 6, y + 12, x + 13, y + 4);
+                } else if ("In Progress".equals(status)) {
+                    // Play/In Progress icon
+                    g2d.setColor(PRIMARY_COLOR);
+                    int[] xPoints = {x + 4, x + 12, x + 4};
+                    int[] yPoints = {y + 3, y + 8, y + 13};
+                    g2d.fillPolygon(xPoints, yPoints, 3);
+                } else {
+                    // Pending/Empty circle icon
+                    g2d.setColor(PENDING_COLOR);
+                    g2d.setStroke(new BasicStroke(1.5f));
+                    g2d.drawOval(x + 3, y + 3, 10, 10);
+                }
+                
+                g2d.dispose();
+            }
+            
+            @Override
+            public int getIconWidth() {
+                return 16;
+            }
+            
+            @Override
+            public int getIconHeight() {
+                return 16;
+            }
+        };
+    }
+
+    // Custom icon creation methods
+    private Icon createRefreshIcon() {
+        return new Icon() {
+            @Override
+            public void paintIcon(Component c, Graphics g, int x, int y) {
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                
+                g2d.setColor(PRIMARY_COLOR);
+                g2d.setStroke(new BasicStroke(2f));
+                
+                // Draw circular refresh arrow
+                g2d.drawArc(x + 2, y + 2, 16, 16, 45, 270);
+                
+                // Draw arrow head
+                int[] xPoints = {x + 16, x + 20, x + 18};
+                int[] yPoints = {y + 6, y + 10, y + 2};
+                g2d.fillPolygon(xPoints, yPoints, 3);
+                
+                g2d.dispose();
+            }
+            
+            @Override
+            public int getIconWidth() {
+                return 22;
+            }
+            
+            @Override
+            public int getIconHeight() {
+                return 22;
+            }
+        };
+    }
+    
+    private Icon createLightbulbIcon() {
+        return new Icon() {
+            @Override
+            public void paintIcon(Component c, Graphics g, int x, int y) {
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                
+                // Draw lightbulb body
+                g2d.setColor(new Color(255, 204, 0)); // Yellow
+                g2d.fillOval(x + 2, y, 10, 10);
+                
+                // Draw bulb rays
+                g2d.setStroke(new BasicStroke(1f));
+                g2d.drawLine(x + 7, y - 3, x + 7, y - 1); // Top
+                g2d.drawLine(x + 13, y + 5, x + 15, y + 5); // Right
+                g2d.drawLine(x + 7, y + 12, x + 7, y + 14); // Bottom
+                g2d.drawLine(x - 1, y + 5, x + 1, y + 5); // Left
+                
+                // Draw diagonal rays
+                g2d.drawLine(x + 11, y + 1, x + 13, y - 1); // Top-right
+                g2d.drawLine(x + 11, y + 9, x + 13, y + 11); // Bottom-right
+                g2d.drawLine(x + 2, y + 9, x, y + 11); // Bottom-left
+                g2d.drawLine(x + 2, y + 1, x, y - 1); // Top-left
+                
+                g2d.dispose();
+            }
+            
+            @Override
+            public int getIconWidth() {
+                return 16;
+            }
+            
+            @Override
+            public int getIconHeight() {
+                return 16;
+            }
+        };
+    }
+
+    // Custom icon creation methods (Add these new methods with the other icon creation methods)
+    
+    private Icon createTaskIcon() {
+        return new Icon() {
+            @Override
+            public void paintIcon(Component c, Graphics g, int x, int y) {
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                
+                g2d.setColor(TEXT_COLOR);
+                g2d.setStroke(new BasicStroke(1.5f));
+                
+                // Draw clipboard outline
+                g2d.drawRect(x + 2, y + 1, 12, 16);
+                
+                // Draw clip at top
+                g2d.drawLine(x + 5, y, x + 5, y + 3);
+                g2d.drawLine(x + 11, y, x + 11, y + 3);
+                
+                // Draw lines for text
+                g2d.drawLine(x + 5, y + 7, x + 11, y + 7);
+                g2d.drawLine(x + 5, y + 11, x + 11, y + 11);
+                g2d.drawLine(x + 5, y + 15, x + 11, y + 15);
+                
+                g2d.dispose();
+            }
+            
+            @Override
+            public int getIconWidth() {
+                return 18;
+            }
+            
+            @Override
+            public int getIconHeight() {
+                return 18;
+            }
+        };
+    }
+    
+    private Icon createPomodoroIcon() {
+        return new Icon() {
+            @Override
+            public void paintIcon(Component c, Graphics g, int x, int y) {
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                
+                g2d.setColor(TEXT_COLOR);
+                g2d.setStroke(new BasicStroke(1.5f));
+                
+                // Draw clock outline
+                g2d.drawOval(x + 1, y + 1, 16, 16);
+                
+                // Draw clock center
+                g2d.fillOval(x + 8, y + 8, 2, 2);
+                
+                // Draw hands
+                g2d.drawLine(x + 9, y + 9, x + 9, y + 4);  // Minute hand
+                g2d.drawLine(x + 9, y + 9, x + 14, y + 9); // Hour hand
+                
+                g2d.dispose();
+            }
+            
+            @Override
+            public int getIconWidth() {
+                return 18;
+            }
+            
+            @Override
+            public int getIconHeight() {
+                return 18;
+            }
+        };
+    }
+    
+    private Icon createDashboardIcon() {
+        return new Icon() {
+            @Override
+            public void paintIcon(Component c, Graphics g, int x, int y) {
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                
+                g2d.setColor(TEXT_COLOR);
+                g2d.setStroke(new BasicStroke(1.5f));
+                
+                // Draw four squares for dashboard
+                g2d.drawRect(x + 2, y + 2, 6, 6);
+                g2d.drawRect(x + 10, y + 2, 6, 6);
+                g2d.drawRect(x + 2, y + 10, 6, 6);
+                g2d.drawRect(x + 10, y + 10, 6, 6);
+                
+                g2d.dispose();
+            }
+            
+            @Override
+            public int getIconWidth() {
+                return 18;
+            }
+            
+            @Override
+            public int getIconHeight() {
+                return 18;
+            }
+        };
+    }
+    
+    private Icon createCalendarIcon() {
+        return new Icon() {
+            @Override
+            public void paintIcon(Component c, Graphics g, int x, int y) {
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                
+                g2d.setColor(TEXT_COLOR);
+                g2d.setStroke(new BasicStroke(1.5f));
+                
+                // Draw calendar outline
+                g2d.drawRect(x + 2, y + 3, 14, 14);
+                
+                // Draw top tabs
+                g2d.drawLine(x + 6, y + 3, x + 6, y);
+                g2d.drawLine(x + 12, y + 3, x + 12, y);
+                
+                // Draw horizontal lines for dates
+                g2d.drawLine(x + 2, y + 8, x + 16, y + 8);
+                g2d.drawLine(x + 2, y + 13, x + 16, y + 13);
+                
+                g2d.dispose();
+            }
+            
+            @Override
+            public int getIconWidth() {
+                return 18;
+            }
+            
+            @Override
+            public int getIconHeight() {
+                return 18;
+            }
+        };
+    }
+    
+    private Icon createNoteIcon() {
+        return new Icon() {
+            @Override
+            public void paintIcon(Component c, Graphics g, int x, int y) {
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                
+                g2d.setColor(TEXT_COLOR);
+                g2d.setStroke(new BasicStroke(1.5f));
+                
+                // Draw note shape
+                g2d.drawRect(x + 2, y + 1, 14, 16);
+                
+                // Draw folded corner
+                g2d.drawLine(x + 12, y + 1, x + 12, y + 5);
+                g2d.drawLine(x + 12, y + 5, x + 16, y + 5);
+                
+                // Draw lines for text
+                g2d.drawLine(x + 5, y + 8, x + 13, y + 8);
+                g2d.drawLine(x + 5, y + 12, x + 13, y + 12);
+                
+                g2d.dispose();
+            }
+            
+            @Override
+            public int getIconWidth() {
+                return 18;
+            }
+            
+            @Override
+            public int getIconHeight() {
+                return 18;
+            }
+        };
+    }
+    
+    private Icon createLogoutIcon() {
+        return new Icon() {
+            @Override
+            public void paintIcon(Component c, Graphics g, int x, int y) {
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                
+                // Door frame
+                g2d.setColor(new Color(255, 89, 89));
+                g2d.setStroke(new BasicStroke(1.5f));
+                g2d.drawRect(x + 2, y, x + 12, y + 16);
+                
+                // Door handle
+                g2d.fillOval(x + 11, y + 7, 4, 4);
+                
+                // Arrow
+                int[] xPoints = {x + 2, x + 2, x + 8};
+                int[] yPoints = {y + 6, y + 10, y + 8};
+                g2d.fillPolygon(xPoints, yPoints, 3);
+                
+                g2d.dispose();
+            }
+            
+            @Override
+            public int getIconWidth() {
+                return 18;
+            }
+            
+            @Override
+            public int getIconHeight() {
+                return 18;
+            }
+        };
+    }
+
+    private void logout() {
+        int choice = JOptionPane.showConfirmDialog(
+            this,
+            "Are you sure you want to logout?",
+            "Confirm Logout",
+            JOptionPane.YES_NO_OPTION,
+            JOptionPane.QUESTION_MESSAGE
+        );
+        
+        if (choice == JOptionPane.YES_OPTION) {
+            dispose();
+            new UserSelectionView(username -> new LoginView(username).setVisible(true)).setVisible(true);
+        }
+    }
+
+    private Icon createBulletIcon() {
+        return new Icon() {
+            @Override
+            public void paintIcon(Component c, Graphics g, int x, int y) {
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                
+                g2d.setColor(PRIMARY_COLOR);
+                g2d.fillOval(x + 1, y + 1, 4, 4);
+                
+                g2d.dispose();
+            }
+            
+            @Override
+            public int getIconWidth() {
+                return 6;
+            }
+            
+            @Override
+            public int getIconHeight() {
+                return 6;
+            }
+        };
     }
 }
