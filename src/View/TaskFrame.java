@@ -106,6 +106,10 @@ public class TaskFrame extends JFrame {
     private static final Color COMPLETED_COLOR = new Color(52, 199, 89);   // Green
     private static final Color PENDING_COLOR = new Color(255, 149, 0);     // Orange
     private static final Color CARD_COLOR = Color.WHITE;
+    
+    // Define consistent task status colors
+    private static final Color IN_PROGRESS_COLOR = PENDING_COLOR;         // Orange for "In Progress"
+    private static final Color PENDING_STATUS_COLOR = new Color(149, 149, 149); // Gray for "Pending"
 
     // Custom calendar component
     private JPanel calendarPanel;
@@ -258,9 +262,9 @@ public class TaskFrame extends JFrame {
                 if ("Completed".equals(task.getStatus())) {
                     statusColor = COMPLETED_COLOR;
                 } else if ("In Progress".equals(task.getStatus())) {
-                    statusColor = PRIMARY_COLOR;
+                    statusColor = IN_PROGRESS_COLOR;
                 } else if ("Pending".equals(task.getStatus())) {
-                    statusColor = PENDING_COLOR;
+                    statusColor = PENDING_STATUS_COLOR;
                 }
                 statusLabel.setForeground(statusColor);
                 leftMeta.add(statusLabel);
@@ -636,7 +640,7 @@ public class TaskFrame extends JFrame {
     private class ChartPanel extends JPanel {
         private int[] data;
         private String[] labels = {"Completed", "In Progress", "Pending"};
-        private Color[] colors = {COMPLETED_COLOR, PRIMARY_COLOR, PENDING_COLOR};
+        private Color[] colors = {COMPLETED_COLOR, IN_PROGRESS_COLOR, PENDING_STATUS_COLOR};
 
         public ChartPanel(int[] initialData) {
             this.data = initialData;
@@ -1293,9 +1297,9 @@ public class TaskFrame extends JFrame {
                 if ("Completed".equals(status)) {
                     textLabel.setForeground(COMPLETED_COLOR);
                 } else if ("In Progress".equals(status)) {
-                    textLabel.setForeground(PRIMARY_COLOR);
+                    textLabel.setForeground(IN_PROGRESS_COLOR);
                 } else if ("Pending".equals(status)) {
-                    textLabel.setForeground(PENDING_COLOR);
+                    textLabel.setForeground(PENDING_STATUS_COLOR);
                 }
                 
                 panel.add(textLabel, BorderLayout.CENTER);
@@ -1749,7 +1753,7 @@ public class TaskFrame extends JFrame {
         panel.add(splitPane, BorderLayout.CENTER);
         return panel;
     }
-
+    
     private JPanel createSectionPanel(String title) {
         JPanel panel = new JPanel(new BorderLayout(0, 10));
         panel.setBackground(CARD_COLOR);
@@ -1778,6 +1782,14 @@ public class TaskFrame extends JFrame {
     }
 
     private JPanel createTaskItem(Task task) {
+        // Refresh the task data from the database to ensure we have the most up-to-date information
+        final Task refreshedTask = TaskController.getTaskById(task.getTaskId());
+        if (refreshedTask != null) {
+            task = refreshedTask;
+        }
+        
+        final Task finalTask = task; // Create a final reference for use in lambdas
+        
         JPanel panel = new JPanel(new BorderLayout(10, 0));
         panel.setBackground(CARD_COLOR);
         panel.setBorder(new EmptyBorder(8, 0, 8, 0));
@@ -1785,29 +1797,67 @@ public class TaskFrame extends JFrame {
         // Checkbox
         JCheckBox checkbox = new JCheckBox();
         checkbox.setBackground(CARD_COLOR);
-        checkbox.setSelected(task.getStatus().equalsIgnoreCase("completed"));
+        checkbox.setSelected("Completed".equalsIgnoreCase(finalTask.getStatus()));
+        
+        // Add action listener to checkbox to update task status when clicked
+        checkbox.addActionListener(e -> {
+            String newStatus = checkbox.isSelected() ? "Completed" : "Pending";
+            if (TaskController.updateTaskStatus(finalTask.getTaskId(), newStatus)) {
+                // Update UI after status change
+                loadTasks();
+                updateDashboard();
+                updateCalendar();
+            }
+        });
+        
         panel.add(checkbox, BorderLayout.WEST);
 
         // Task details
         JPanel details = new JPanel(new BorderLayout(5, 0));
         details.setBackground(CARD_COLOR);
 
-        JLabel titleLabel = new JLabel(task.getTitle());
+        JLabel titleLabel = new JLabel(finalTask.getTitle());
         titleLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        if (task.getStatus().equalsIgnoreCase("completed")) {
-            titleLabel.setText("<html><strike>" + task.getTitle() + "</strike></html>");
-            titleLabel.setForeground(new Color(158, 158, 158));
+        
+        // Set color and style based on status - using case-insensitive comparison
+        String status = finalTask.getStatus().toLowerCase();
+        if (status.equals("completed")) {
+            titleLabel.setText("<html><strike>" + finalTask.getTitle() + "</strike></html>");
+            titleLabel.setForeground(COMPLETED_COLOR);
+        } else if (status.equals("in progress")) {
+            titleLabel.setForeground(IN_PROGRESS_COLOR);
+        } else if (status.equals("pending")) {
+            titleLabel.setForeground(PENDING_STATUS_COLOR);
         } else {
             titleLabel.setForeground(TEXT_COLOR);
         }
         details.add(titleLabel, BorderLayout.CENTER);
 
-        if (task.getDueDate() != null) {
-            JLabel dateLabel = new JLabel(formatDueDate(task.getDueDate()));
+        if (finalTask.getDueDate() != null) {
+            JLabel dateLabel = new JLabel(formatDueDate(finalTask.getDueDate()));
             dateLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
             dateLabel.setForeground(new Color(158, 158, 158));
             details.add(dateLabel, BorderLayout.EAST);
         }
+
+        // Make the panel clickable to view task details
+        panel.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                // Get fresh task data from database
+                Task freshTask = TaskController.getTaskById(finalTask.getTaskId());
+                if (freshTask != null) {
+                    // Find the task in the list model
+                    for (int i = 0; i < taskListModel.getSize(); i++) {
+                        if (taskListModel.getElementAt(i).getTaskId() == freshTask.getTaskId()) {
+                            taskList.setSelectedIndex(i);
+                            break;
+                        }
+                    }
+                    displayTaskDetails(freshTask);
+                }
+            }
+        });
 
         panel.add(details, BorderLayout.CENTER);
         return panel;
@@ -1855,7 +1905,7 @@ public class TaskFrame extends JFrame {
         panel.add(textPanel, BorderLayout.CENTER);
         return panel;
     }
-
+    
     private JPanel createNoteItem(String title) {
         JPanel panel = new JPanel(new BorderLayout(10, 0));
         panel.setBackground(CARD_COLOR);
@@ -1910,7 +1960,7 @@ public class TaskFrame extends JFrame {
         panel.add(spinner);
         return panel;
     }
-
+    
     private JPanel createCheckboxRow(String label) {
         JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         panel.setOpaque(false);
@@ -2051,9 +2101,22 @@ public class TaskFrame extends JFrame {
 
     private void loadTasks() {
         taskListModel.clear();
-        List<Task> tasks = TaskController.getTasks(userId);
-        for (Task task : tasks) {
-            taskListModel.addElement(task);
+        
+        try {
+            // Get fresh data from the database
+            List<Task> tasks = TaskController.getTasks(userId);
+            
+            // Add each task to the list model
+            for (Task task : tasks) {
+                taskListModel.addElement(task);
+            }
+            
+            // Refresh the dashboard and calendar views
+            if (dashboardPanel != null) {
+                updateDashboard();
+            }
+        } catch (Exception e) {
+            System.out.println("Error loading tasks: " + e.getMessage());
         }
     }
 
@@ -2157,7 +2220,7 @@ public class TaskFrame extends JFrame {
         JScrollPane scrollPane = new JScrollPane(taskList);
         scrollPane.setBorder(null);
         scrollPane.getViewport().setBackground(SIDEBAR_COLOR);
-
+        
         panel.add(headerPanel, BorderLayout.NORTH);
         panel.add(scrollPane, BorderLayout.CENTER);
 
@@ -2185,29 +2248,84 @@ public class TaskFrame extends JFrame {
     }
 
     /**
-     * Displays task details in the form
+     * Displays the details of a task in the task details panel
      */
     private void displayTaskDetails(Task task) {
+        // Get the latest version of the task from the database
+        Task freshTask = TaskController.getTaskById(task.getTaskId());
+        if (freshTask != null) {
+            task = freshTask;
+        }
+        
         titleField.setText(task.getTitle());
         descriptionField.setText(task.getDescription());
-        statusComboBox.setSelectedItem(task.getStatus());
-        dueDateSpinner.setValue(task.getDueDate() != null ? 
-            task.getDueDate() : new Date());
         
-        // Set the selected category
+        // Handle status safely
+        String status = task.getStatus();
+        if (status != null) {
+            // Find matching status in the combo box
+            for (int i = 0; i < statusComboBox.getItemCount(); i++) {
+                String comboStatus = statusComboBox.getItemAt(i);
+                if (status.equalsIgnoreCase(comboStatus)) {
+                    statusComboBox.setSelectedIndex(i);
+                    break;
+                }
+            }
+            // If no exact match found, try to match by substring
+            if (statusComboBox.getSelectedIndex() == -1) {
+                status = status.toLowerCase();
+                if (status.contains("complete") || status.equals("done")) {
+                    for (int i = 0; i < statusComboBox.getItemCount(); i++) {
+                        if (statusComboBox.getItemAt(i).toLowerCase().contains("complete")) {
+                            statusComboBox.setSelectedIndex(i);
+                            break;
+                        }
+                    }
+                } else if (status.contains("progress")) {
+                    for (int i = 0; i < statusComboBox.getItemCount(); i++) {
+                        if (statusComboBox.getItemAt(i).toLowerCase().contains("progress")) {
+                            statusComboBox.setSelectedIndex(i);
+                            break;
+                        }
+                    }
+                } else if (status.contains("pending") || status.equals("waiting")) {
+                    for (int i = 0; i < statusComboBox.getItemCount(); i++) {
+                        if (statusComboBox.getItemAt(i).toLowerCase().contains("pending")) {
+                            statusComboBox.setSelectedIndex(i);
+                            break;
+                        }
+                    }
+                } else {
+                    // Default to first status if no match
+                    statusComboBox.setSelectedIndex(0);
+                }
+            }
+        } else {
+            // If status is null, default to the first item
+            statusComboBox.setSelectedIndex(0);
+        }
+        
+        // Set due date
+        if (task.getDueDate() != null) {
+            dueDateSpinner.setValue(task.getDueDate());
+        } else {
+            dueDateSpinner.setValue(new Date());
+        }
+        
+        // Set category
         if (task.getCategory() != null) {
             for (int i = 0; i < categoryComboBox.getItemCount(); i++) {
-                Category category = categoryComboBox.getItemAt(i);
-                if (category.getId() == task.getCategory().getId()) {
+                Category cat = categoryComboBox.getItemAt(i);
+                if (cat.getId() == task.getCategory().getId()) {
                     categoryComboBox.setSelectedIndex(i);
                     break;
                 }
             }
         } else {
-            categoryComboBox.setSelectedIndex(0); // "No Category"
+            categoryComboBox.setSelectedIndex(0);
         }
         
-        // Load subtasks for this task from the database
+        // Set the current subtasks
         currentSubTasks = SubTaskController.getSubTasksByTaskId(task.getTaskId());
         updateSubTasksPanel();
         
@@ -2316,9 +2434,9 @@ public class TaskFrame extends JFrame {
             dateLabel.setBorder(new EmptyBorder(5, 5, 5, 5));
             dateLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
             
-            JPanel tasksPanel = new JPanel();
-            tasksPanel.setLayout(new BoxLayout(tasksPanel, BoxLayout.Y_AXIS));
-            tasksPanel.setBackground(CARD_COLOR);
+        JPanel tasksPanel = new JPanel();
+        tasksPanel.setLayout(new BoxLayout(tasksPanel, BoxLayout.Y_AXIS));
+        tasksPanel.setBackground(CARD_COLOR);
             
             dayCell.add(dateLabel, BorderLayout.NORTH);
             dayCell.add(tasksPanel, BorderLayout.CENTER);
@@ -2353,12 +2471,14 @@ public class TaskFrame extends JFrame {
         // Clear all cells
         for (Component comp : calendarGrid.getComponents()) {
             JPanel dayCell = (JPanel) comp;
-            JLabel dateLabel = (JLabel) dayCell.getComponent(0);
-            JPanel tasksPanel = (JPanel) dayCell.getComponent(1);
-            
-            dateLabel.setText("");
-            tasksPanel.removeAll();
-            dayCell.setBackground(CARD_COLOR);
+            if (dayCell.getComponentCount() >= 2) {
+                JLabel dateLabel = (JLabel) dayCell.getComponent(0);
+                JPanel tasksPanel = (JPanel) dayCell.getComponent(1);
+                
+                dateLabel.setText("");
+                tasksPanel.removeAll();
+                dayCell.setBackground(CARD_COLOR);
+            }
         }
         
         // Get days in month
@@ -2367,28 +2487,53 @@ public class TaskFrame extends JFrame {
         // Get today's date for highlighting
         Calendar today = Calendar.getInstance();
         
+        // Load fresh data from the database
+        loadTasks();
+        
         // Fill calendar with dates
         for (int i = 0; i < daysInMonth; i++) {
+            if (firstDayOfMonth + i >= calendarGrid.getComponentCount()) {
+                continue; // Skip if out of bounds
+            }
+            
             JPanel dayCell = (JPanel) calendarGrid.getComponent(firstDayOfMonth + i);
+            if (dayCell.getComponentCount() < 2) continue;
+            
             JLabel dateLabel = (JLabel) dayCell.getComponent(0);
             JPanel tasksPanel = (JPanel) dayCell.getComponent(1);
             
+            tasksPanel.setLayout(new BoxLayout(tasksPanel, BoxLayout.Y_AXIS));
+            
+            // Set date label
             int day = i + 1;
             dateLabel.setText(String.valueOf(day));
             
-            // Highlight current day
-            if (today.get(Calendar.YEAR) == currentCalendar.get(Calendar.YEAR) &&
-                today.get(Calendar.MONTH) == currentCalendar.get(Calendar.MONTH) &&
-                today.get(Calendar.DAY_OF_MONTH) == day) {
+            // Highlight today's date
+            if (currentCalendar.get(Calendar.YEAR) == today.get(Calendar.YEAR) &&
+                currentCalendar.get(Calendar.MONTH) == today.get(Calendar.MONTH) &&
+                day == today.get(Calendar.DAY_OF_MONTH)) {
                 dateLabel.setForeground(PRIMARY_COLOR);
-                dateLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
-                dayCell.setBackground(new Color(240, 247, 255));
+                dateLabel.setFont(new Font("Segoe UI", Font.BOLD, 12));
+            } else {
+                dateLabel.setForeground(TEXT_COLOR);
+                dateLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
             }
             
-            // Add tasks due on this day
+            // Add tasks for this day
             for (int j = 0; j < taskListModel.getSize(); j++) {
                 Task task = taskListModel.getElementAt(j);
-                if (task.getDueDate() != null) {
+                
+                // Get the task with fresh data from database to ensure we have the latest status
+                Task refreshedTask = TaskController.getTaskById(task.getTaskId());
+                if (refreshedTask != null) {
+                    task = refreshedTask;
+                }
+                
+                // Skip tasks without due dates
+                if (task.getDueDate() == null) continue;
+                
+                try {
+                    // Check if task is on this day
                     Calendar taskDate = Calendar.getInstance();
                     taskDate.setTime(task.getDueDate());
                     
@@ -2396,26 +2541,87 @@ public class TaskFrame extends JFrame {
                         taskDate.get(Calendar.MONTH) == currentCalendar.get(Calendar.MONTH) &&
                         taskDate.get(Calendar.DAY_OF_MONTH) == day) {
                         
-                        JLabel taskLabel = new JLabel(task.getTitle());
-                        taskLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-                        taskLabel.setBorder(new EmptyBorder(2, 5, 2, 5));
+                        // Create a panel for this task
+                        JPanel taskPanel = new JPanel(new BorderLayout());
+                        taskPanel.setBorder(BorderFactory.createEmptyBorder(1, 0, 1, 0));
+                        taskPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 25));
                         
-                        if ("Completed".equals(task.getStatus())) {
-                            taskLabel.setForeground(COMPLETED_COLOR);
-                        } else if ("In Progress".equals(task.getStatus())) {
-                            taskLabel.setForeground(PRIMARY_COLOR);
+                        // Determine color based on status - using case-insensitive comparison for reliability
+                        Color taskColor;
+                        String status = task.getStatus() != null ? task.getStatus().toLowerCase() : "";
+                        if (status.contains("completed") || status.equals("done")) {
+                            taskColor = COMPLETED_COLOR; // Green
+                        } else if (status.contains("pending") || status.equals("waiting")) {
+                            taskColor = PENDING_STATUS_COLOR; // Gray
+                        } else if (status.contains("progress") || status.equals("in progress")) {
+                            taskColor = IN_PROGRESS_COLOR; // Orange
                         } else {
-                            taskLabel.setForeground(PENDING_COLOR);
+                            taskColor = IN_PROGRESS_COLOR; // Default to orange for any other status
                         }
                         
-                        tasksPanel.add(taskLabel);
+                        // Create a color bar on the left
+                        JPanel colorBar = new JPanel();
+                        colorBar.setBackground(taskColor);
+                        colorBar.setPreferredSize(new Dimension(3, 0));
+                        
+                        // Create the task label
+                        JLabel taskLabel = new JLabel(task.getTitle());
+                        taskLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+                        taskLabel.setForeground(TEXT_COLOR);
+                        taskLabel.setBorder(BorderFactory.createEmptyBorder(2, 5, 2, 5));
+                        
+                        // Add a background color based on status (with transparency)
+                        Color bgColor = new Color(
+                            taskColor.getRed(),
+                            taskColor.getGreen(),
+                            taskColor.getBlue(),
+                            30); // Light transparency
+                        taskPanel.setBackground(bgColor);
+                        
+                        // Add components to task panel
+                        taskPanel.add(colorBar, BorderLayout.WEST);
+                        taskPanel.add(taskLabel, BorderLayout.CENTER);
+                        
+                        // Add completed task strikethrough
+                        if (status.contains("completed") || status.equals("done")) {
+                            taskLabel.setText("<html><strike>" + task.getTitle() + "</strike></html>");
+                        }
+                        
+                        // Make task panel clickable to view task details
+                        final Task finalTask = task;
+                        taskPanel.addMouseListener(new MouseAdapter() {
+                            @Override
+                            public void mouseClicked(MouseEvent e) {
+                                // Use the task ID to get a fresh copy of the task from the database
+                                Task freshTask = TaskController.getTaskById(finalTask.getTaskId());
+                                if (freshTask != null) {
+                                    // Find the task in the list model
+                                    for (int k = 0; k < taskListModel.getSize(); k++) {
+                                        if (taskListModel.getElementAt(k).getTaskId() == freshTask.getTaskId()) {
+                                            taskList.setSelectedIndex(k);
+                                            break;
+                                        }
+                                    }
+                                    displayTaskDetails(freshTask);
+                                }
+                            }
+                        });
+                        
+                        // Add task to the day cell
+                        tasksPanel.add(taskPanel);
                     }
+                } catch (Exception e) {
+                    System.out.println("Error displaying task in calendar: " + e.getMessage());
                 }
             }
             
             tasksPanel.revalidate();
             tasksPanel.repaint();
         }
+        
+        // Ensure the entire calendar is properly refreshed
+        calendarGrid.revalidate();
+        calendarGrid.repaint();
     }
 
     /**
@@ -2555,9 +2761,9 @@ public class TaskFrame extends JFrame {
         Task selectedTask = taskList.getSelectedValue();
         if (selectedTask == null) {
             JOptionPane.showMessageDialog(this, "No task selected!", "Warning", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
-
+                return;
+            }
+            
         String title = titleField.getText().trim();
         String description = descriptionField.getText().trim();
         String status = (String) statusComboBox.getSelectedItem();
@@ -2579,6 +2785,7 @@ public class TaskFrame extends JFrame {
         if (success) {
             loadTasks();
             updateDashboard();
+            updateCalendar(); // Update calendar to reflect the changes
             showTaskListView();
         } else {
             JOptionPane.showMessageDialog(this, "Failed to update task!", "Error", JOptionPane.ERROR_MESSAGE);
@@ -2642,6 +2849,7 @@ public class TaskFrame extends JFrame {
             loadTasks();
             clearFields();
             updateDashboard();
+            updateCalendar(); // Update calendar to reflect the changes
             showTaskListView();
         } else {
             JOptionPane.showMessageDialog(this, "Failed to add task!", "Error", JOptionPane.ERROR_MESSAGE);
@@ -2817,10 +3025,10 @@ public class TaskFrame extends JFrame {
             if (value instanceof Note) {
                 Note note = (Note) value;
                 
-                JPanel panel = new JPanel(new BorderLayout());
+        JPanel panel = new JPanel(new BorderLayout());
                 panel.setBackground(isSelected ? HOVER_COLOR : SIDEBAR_COLOR);
-                panel.setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createMatteBorder(0, 0, 1, 0, BORDER_COLOR),
+        panel.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createMatteBorder(0, 0, 1, 0, BORDER_COLOR),
                     BorderFactory.createEmptyBorder(15, 10, 15, 10)
                 ));
                 
@@ -3307,21 +3515,24 @@ public class TaskFrame extends JFrame {
                 Graphics2D g2d = (Graphics2D) g.create();
                 g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                 
-                if ("Completed".equals(status)) {
+                // Convert status to lowercase for case-insensitive comparison
+                String statusLower = status != null ? status.toLowerCase() : "";
+                
+                if ("completed".equals(statusLower)) {
                     // Checkmark icon
                     g2d.setColor(COMPLETED_COLOR);
                     g2d.setStroke(new BasicStroke(2f));
                     g2d.drawLine(x + 3, y + 8, x + 6, y + 12);
                     g2d.drawLine(x + 6, y + 12, x + 13, y + 4);
-                } else if ("In Progress".equals(status)) {
+                } else if ("in progress".equals(statusLower)) {
                     // Play/In Progress icon
-                    g2d.setColor(PRIMARY_COLOR);
+                    g2d.setColor(IN_PROGRESS_COLOR);
                     int[] xPoints = {x + 4, x + 12, x + 4};
                     int[] yPoints = {y + 3, y + 8, y + 13};
                     g2d.fillPolygon(xPoints, yPoints, 3);
                 } else {
-                    // Pending/Empty circle icon
-                    g2d.setColor(PENDING_COLOR);
+                    // Pending/Empty circle icon - default for "pending" or any other status
+                    g2d.setColor(PENDING_STATUS_COLOR);
                     g2d.setStroke(new BasicStroke(1.5f));
                     g2d.drawOval(x + 3, y + 3, 10, 10);
                 }
@@ -3666,3 +3877,4 @@ public class TaskFrame extends JFrame {
         };
     }
 }
+        
