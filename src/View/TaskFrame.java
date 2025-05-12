@@ -183,36 +183,25 @@ public class TaskFrame extends JFrame {
             if (value instanceof Task) {
                 Task task = (Task) value;
                 String title = task.getTitle();
-                String status = task.getStatus();
-                String categoryText = "";
-                
-                // Add category information if available
-                if (task.getCategory() != null) {
-                    categoryText = " [" + task.getCategory().getName() + "]";
-                }
-                
-                setText(title + categoryText);
+                setText(title);
                 
                 // Set icon based on status
-                if ("Completed".equals(status)) {
-                    setIcon(UIManager.getIcon("CheckBox.icon"));
+                if ("Completed".equals(task.getStatus())) {
                     setFont(getFont().deriveFont(Font.PLAIN));
+                    setForeground(Color.GRAY);
                 } else {
-                    setIcon(UIManager.getIcon("Tree.leafIcon"));
                     setFont(getFont().deriveFont(Font.BOLD));
+                    if (isSelected) {
+                        setForeground(PRIMARY_COLOR);
+                    } else {
+                        setForeground(TEXT_COLOR);
+                    }
                 }
                 
                 if (isSelected) {
                     setBackground(HOVER_COLOR);
-                    setForeground(PRIMARY_COLOR);
                 } else {
                     setBackground(Color.WHITE);
-                    
-                    if ("Completed".equals(status)) {
-                        setForeground(Color.GRAY);
-                    } else {
-                        setForeground(TEXT_COLOR);
-                    }
                 }
                 
                 setBorder(BorderFactory.createCompoundBorder(
@@ -231,6 +220,15 @@ public class TaskFrame extends JFrame {
     private JTextArea notesContentArea;
     private JComboBox<Category> notesCategoryComboBox;
     private Note currentNote;
+
+    // Add these as class variables
+    private JPanel tasksMainPanel;
+    private JSplitPane tasksSplitPane;
+    private boolean tasksDetailMode = false;
+
+    private JPanel notesMainPanel;
+    private JSplitPane notesSplitPane;
+    private boolean notesDetailMode = false;
 
     public TaskFrame(int userId) {
         this.userId = userId;
@@ -259,6 +257,7 @@ public class TaskFrame extends JFrame {
                 Task selectedTask = taskList.getSelectedValue();
                 if (selectedTask != null) {
                     displayTaskDetails(selectedTask);
+                    showTaskDetailsPanel();
                 }
             }
         });
@@ -274,8 +273,12 @@ public class TaskFrame extends JFrame {
         mainContentPanel = new JPanel(new CardLayout());
         mainContentPanel.setBackground(BACKGROUND_COLOR);
         
-        // Create task view with split pane (list on left, details on right)
-        JSplitPane tasksSplitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
+        // Create tasks main panel
+        tasksMainPanel = new JPanel(new BorderLayout());
+        tasksMainPanel.setBackground(BACKGROUND_COLOR);
+        
+        // Create task split pane (list on left, details on right)
+        tasksSplitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
         tasksSplitPane.setDividerLocation(300);
         tasksSplitPane.setDividerSize(1);
         tasksSplitPane.setBorder(null);
@@ -289,6 +292,9 @@ public class TaskFrame extends JFrame {
         JPanel taskDetailsPanel = createTaskDetailsPanel();
         tasksSplitPane.setRightComponent(taskDetailsPanel);
         
+        // Default to showing only the list
+        tasksMainPanel.add(taskListPanel, BorderLayout.CENTER);
+        
         // Create pomodoro panel
         pomodoroPanel = createPomodoroPanel();
         
@@ -298,10 +304,12 @@ public class TaskFrame extends JFrame {
         // Create calendar panel - store the reference first
         calendarPanel = createCalendarPanel();
         
-        // Create notes panel with split pane (list on left, details on right)
-        JPanel notesPanel = new JPanel(new BorderLayout());
-        notesPanel.setBackground(BACKGROUND_COLOR);
-        JSplitPane notesSplitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
+        // Create notes main panel
+        notesMainPanel = new JPanel(new BorderLayout());
+        notesMainPanel.setBackground(BACKGROUND_COLOR);
+        
+        // Create notes split pane (list on left, details on right)
+        notesSplitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
         notesSplitPane.setDividerLocation(300);
         notesSplitPane.setDividerSize(1);
         notesSplitPane.setBorder(null);
@@ -315,14 +323,15 @@ public class TaskFrame extends JFrame {
         JPanel noteDetailsPanel = createNoteDetailsPanel();
         notesSplitPane.setRightComponent(noteDetailsPanel);
         
-        notesPanel.add(notesSplitPane, BorderLayout.CENTER);
+        // Default to showing only the list
+        notesMainPanel.add(notesListPanel, BorderLayout.CENTER);
         
         // Add panels to card layout
-        mainContentPanel.add(tasksSplitPane, "TASKS");
+        mainContentPanel.add(tasksMainPanel, "TASKS");
         mainContentPanel.add(pomodoroPanel, "POMODORO");
         mainContentPanel.add(dashboardPanel, "DASHBOARD");
         mainContentPanel.add(calendarPanel, "CALENDAR");
-        mainContentPanel.add(notesPanel, "NOTES");
+        mainContentPanel.add(notesMainPanel, "NOTES");
         
         // Add main content panel to frame
         add(mainContentPanel, BorderLayout.CENTER);
@@ -1076,10 +1085,28 @@ public class TaskFrame extends JFrame {
         headerPanel.setBackground(BACKGROUND_COLOR);
         headerPanel.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, BORDER_COLOR));
         
+        // Add header with back button and title
+        JPanel headerTitlePanel = new JPanel(new BorderLayout(10, 0));
+        headerTitlePanel.setBackground(BACKGROUND_COLOR);
+        
+        // Back button
+        JButton backButton = new JButton("← Back to Tasks");
+        backButton.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        backButton.setForeground(PRIMARY_COLOR);
+        backButton.setBackground(BACKGROUND_COLOR);
+        backButton.setBorderPainted(false);
+        backButton.setFocusPainted(false);
+        backButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        backButton.addActionListener(e -> showTaskListPanel());
+        
         JLabel headerLabel = new JLabel("Task Details");
         headerLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
         headerLabel.setForeground(TEXT_COLOR);
-        headerPanel.add(headerLabel, BorderLayout.WEST);
+        
+        headerTitlePanel.add(backButton, BorderLayout.WEST);
+        headerTitlePanel.add(headerLabel, BorderLayout.CENTER);
+        
+        headerPanel.add(headerTitlePanel, BorderLayout.WEST);
         
         // Add panel to contain buttons
         JPanel buttonsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
@@ -1698,10 +1725,23 @@ public class TaskFrame extends JFrame {
             BorderFactory.createEmptyBorder(10, 10, 10, 10)
         ));
         
-        // Title label on the left
+        // Title label
         JLabel titleLabel = new JLabel("Tasks");
         titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
         titleLabel.setForeground(TEXT_COLOR);
+        
+        // Panel for buttons on the right
+        JPanel buttonsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 5, 0));
+        buttonsPanel.setBackground(SIDEBAR_COLOR);
+        
+        // Display button (to show full list)
+        JButton displayButton = new JButton("Display Tasks");
+        displayButton.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        displayButton.setFocusPainted(false);
+        displayButton.setBackground(HOVER_COLOR);
+        displayButton.setForeground(TEXT_COLOR);
+        displayButton.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
+        displayButton.addActionListener(e -> showTaskListPanel());
         
         // Add button on the right
         JButton newButton = new JButton("+ New");
@@ -1713,13 +1753,17 @@ public class TaskFrame extends JFrame {
         newButton.addActionListener(e -> {
             clearFields();
             addButton.setText("Add Task");
+            showTaskDetailsPanel();
         });
         
-        // Panel for title and new button
+        buttonsPanel.add(displayButton);
+        buttonsPanel.add(newButton);
+        
+        // Panel for title and buttons
         JPanel titleButtonPanel = new JPanel(new BorderLayout(10, 0));
         titleButtonPanel.setBackground(SIDEBAR_COLOR);
         titleButtonPanel.add(titleLabel, BorderLayout.WEST);
-        titleButtonPanel.add(newButton, BorderLayout.EAST);
+        titleButtonPanel.add(buttonsPanel, BorderLayout.EAST);
         
         headerPanel.add(titleButtonPanel, BorderLayout.NORTH);
         
@@ -1759,7 +1803,7 @@ public class TaskFrame extends JFrame {
         // Task list with custom renderer
         taskList.setBackground(SIDEBAR_COLOR);
         taskList.setBorder(null);
-        taskList.setFixedCellHeight(60);
+        taskList.setFixedCellHeight(40); // Make rows more compact
         
         JScrollPane scrollPane = new JScrollPane(taskList);
         scrollPane.setBorder(null);
@@ -2150,6 +2194,8 @@ public class TaskFrame extends JFrame {
         if (success) {
             loadTasks();
             updateDashboard();
+            JOptionPane.showMessageDialog(this, "Task updated successfully", "Success", JOptionPane.INFORMATION_MESSAGE);
+            showTaskListPanel(); // Return to list view after successful update
         } else {
             JOptionPane.showMessageDialog(this, "Failed to update task!", "Error", JOptionPane.ERROR_MESSAGE);
         }
@@ -2172,6 +2218,7 @@ public class TaskFrame extends JFrame {
                 loadTasks();
                 clearFields();
                 updateDashboard();
+                showTaskListPanel(); // Return to list view after successful delete
             } else {
                 JOptionPane.showMessageDialog(this,
                     "Failed to delete task",
@@ -2207,6 +2254,8 @@ public class TaskFrame extends JFrame {
             loadTasks();
             clearFields();
             updateDashboard();
+            JOptionPane.showMessageDialog(this, "Task added successfully", "Success", JOptionPane.INFORMATION_MESSAGE);
+            showTaskListPanel(); // Return to list view after successful add
         } else {
             JOptionPane.showMessageDialog(this, "Failed to add task!", "Error", JOptionPane.ERROR_MESSAGE);
         }
@@ -2229,10 +2278,23 @@ public class TaskFrame extends JFrame {
             BorderFactory.createEmptyBorder(10, 10, 10, 10)
         ));
         
-        // Title label on the left
+        // Title label
         JLabel titleLabel = new JLabel("Notes");
         titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
         titleLabel.setForeground(TEXT_COLOR);
+        
+        // Panel for buttons on the right
+        JPanel buttonsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 5, 0));
+        buttonsPanel.setBackground(SIDEBAR_COLOR);
+        
+        // Display button (to show full list)
+        JButton displayButton = new JButton("Display Notes");
+        displayButton.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        displayButton.setFocusPainted(false);
+        displayButton.setBackground(HOVER_COLOR);
+        displayButton.setForeground(TEXT_COLOR);
+        displayButton.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
+        displayButton.addActionListener(e -> showNoteListPanel());
         
         // Add button on the right
         JButton newButton = new JButton("+ New");
@@ -2244,13 +2306,17 @@ public class TaskFrame extends JFrame {
         newButton.addActionListener(e -> {
             clearNotesFields();
             currentNote = null;
+            showNoteDetailsPanel();
         });
         
-        // Panel for title and new button
+        buttonsPanel.add(displayButton);
+        buttonsPanel.add(newButton);
+        
+        // Panel for title and buttons
         JPanel titleButtonPanel = new JPanel(new BorderLayout(10, 0));
         titleButtonPanel.setBackground(SIDEBAR_COLOR);
         titleButtonPanel.add(titleLabel, BorderLayout.WEST);
-        titleButtonPanel.add(newButton, BorderLayout.EAST);
+        titleButtonPanel.add(buttonsPanel, BorderLayout.EAST);
         
         headerPanel.add(titleButtonPanel, BorderLayout.NORTH);
         
@@ -2323,13 +2389,14 @@ public class TaskFrame extends JFrame {
         // Notes list
         notesListModel = new DefaultListModel<>();
         notesList = new JList<>(notesListModel);
-        notesList.setCellRenderer(new NoteListCellRenderer());
+        notesList.setCellRenderer(new SimpleNoteListCellRenderer());
         notesList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         notesList.addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting()) {
                 Note selectedNote = notesList.getSelectedValue();
                 if (selectedNote != null) {
                     displayNoteDetails(selectedNote);
+                    showNoteDetailsPanel();
                 }
             }
         });
@@ -2347,7 +2414,7 @@ public class TaskFrame extends JFrame {
     /**
      * Custom cell renderer for notes list
      */
-    private class NoteListCellRenderer extends DefaultListCellRenderer {
+    private class SimpleNoteListCellRenderer extends DefaultListCellRenderer {
         private SimpleDateFormat dateFormat = new SimpleDateFormat("MMM d, yyyy");
         
         @Override
@@ -2426,10 +2493,28 @@ public class TaskFrame extends JFrame {
         headerPanel.setBackground(BACKGROUND_COLOR);
         headerPanel.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, BORDER_COLOR));
         
+        // Add header with back button and title
+        JPanel headerTitlePanel = new JPanel(new BorderLayout(10, 0));
+        headerTitlePanel.setBackground(BACKGROUND_COLOR);
+        
+        // Back button
+        JButton backButton = new JButton("← Back to Notes");
+        backButton.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        backButton.setForeground(PRIMARY_COLOR);
+        backButton.setBackground(BACKGROUND_COLOR);
+        backButton.setBorderPainted(false);
+        backButton.setFocusPainted(false);
+        backButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        backButton.addActionListener(e -> showNoteListPanel());
+        
         JLabel headerLabel = new JLabel("Note Details");
         headerLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
         headerLabel.setForeground(TEXT_COLOR);
-        headerPanel.add(headerLabel, BorderLayout.WEST);
+        
+        headerTitlePanel.add(backButton, BorderLayout.WEST);
+        headerTitlePanel.add(headerLabel, BorderLayout.CENTER);
+        
+        headerPanel.add(headerTitlePanel, BorderLayout.WEST);
         
         // Add panel to contain buttons
         JPanel buttonsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
@@ -2708,6 +2793,7 @@ public class TaskFrame extends JFrame {
         if (success) {
             loadNotes(); // Refresh the list
             JOptionPane.showMessageDialog(this, "Note saved successfully", "Success", JOptionPane.INFORMATION_MESSAGE);
+            showNoteListPanel(); // Return to the list view after saving
         } else {
             JOptionPane.showMessageDialog(this, "Failed to save note", "Error", JOptionPane.ERROR_MESSAGE);
         }
@@ -2732,9 +2818,74 @@ public class TaskFrame extends JFrame {
                 loadNotes(); // Refresh the list
                 clearNotesFields();
                 JOptionPane.showMessageDialog(this, "Note deleted successfully", "Success", JOptionPane.INFORMATION_MESSAGE);
+                showNoteListPanel(); // Return to the list view after deleting
             } else {
                 JOptionPane.showMessageDialog(this, "Failed to delete note", "Error", JOptionPane.ERROR_MESSAGE);
             }
+        }
+    }
+
+    // Add method to show only the task list
+    private void showTaskListPanel() {
+        if (tasksDetailMode) {
+            tasksMainPanel.removeAll();
+            Component leftComponent = tasksSplitPane.getLeftComponent();
+            if (leftComponent != null) {
+                tasksMainPanel.add(leftComponent, BorderLayout.CENTER);
+            } else {
+                // Fallback if left component is null
+                JPanel taskListPanel = createTaskListPanel();
+                tasksSplitPane.setLeftComponent(taskListPanel);
+                tasksMainPanel.add(taskListPanel, BorderLayout.CENTER);
+            }
+            tasksMainPanel.revalidate();
+            tasksMainPanel.repaint();
+            tasksDetailMode = false;
+            taskList.clearSelection();
+            clearFields(); // Clear form fields when returning to list view
+        }
+    }
+
+    // Add method to show task details in split mode
+    private void showTaskDetailsPanel() {
+        if (!tasksDetailMode) {
+            tasksMainPanel.removeAll();
+            tasksMainPanel.add(tasksSplitPane, BorderLayout.CENTER);
+            tasksMainPanel.revalidate();
+            tasksMainPanel.repaint();
+            tasksDetailMode = true;
+        }
+    }
+
+    // Add method to show only the note list
+    private void showNoteListPanel() {
+        if (notesDetailMode) {
+            notesMainPanel.removeAll();
+            Component leftComponent = notesSplitPane.getLeftComponent();
+            if (leftComponent != null) {
+                notesMainPanel.add(leftComponent, BorderLayout.CENTER);
+            } else {
+                // Fallback if left component is null
+                JPanel notesListPanel = createNotesListPanel();
+                notesSplitPane.setLeftComponent(notesListPanel);
+                notesMainPanel.add(notesListPanel, BorderLayout.CENTER);
+            }
+            notesMainPanel.revalidate();
+            notesMainPanel.repaint();
+            notesDetailMode = false;
+            notesList.clearSelection();
+            clearNotesFields(); // Clear form fields when returning to list view
+        }
+    }
+
+    // Add method to show note details in split mode
+    private void showNoteDetailsPanel() {
+        if (!notesDetailMode) {
+            notesMainPanel.removeAll();
+            notesMainPanel.add(notesSplitPane, BorderLayout.CENTER);
+            notesMainPanel.revalidate();
+            notesMainPanel.repaint();
+            notesDetailMode = true;
         }
     }
 }
