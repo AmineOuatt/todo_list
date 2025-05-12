@@ -1,11 +1,16 @@
 package View;
 
+import java.awt.BasicStroke;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.Font;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
+import java.awt.geom.Ellipse2D;
 import java.util.List;
 
 import javax.swing.BorderFactory;
@@ -63,11 +68,66 @@ public class LoginView extends JFrame {
         mainPanel.setBorder(new EmptyBorder(40, 40, 40, 40));
 
         // Logo and Title
-        JLabel logoLabel = new JLabel("✓", SwingConstants.CENTER);
-        logoLabel.setFont(new Font("Segoe UI", Font.BOLD, 48));
-        logoLabel.setForeground(PRIMARY_COLOR);
-        logoLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-        mainPanel.add(logoLabel);
+        // Replace the Unicode logo with custom drawn checkmark
+        JPanel logoPanel = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2d = (Graphics2D) g;
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                
+                // Draw circular background with gradient effect
+                int size = Math.min(getWidth(), getHeight()) - 20;
+                int x = (getWidth() - size) / 2;
+                int y = (getHeight() - size) / 2;
+                
+                // Create gradient for a 3D effect
+                Color lighterPrimary = new Color(
+                    Math.min(PRIMARY_COLOR.getRed() + 40, 255),
+                    Math.min(PRIMARY_COLOR.getGreen() + 40, 255),
+                    Math.min(PRIMARY_COLOR.getBlue() + 40, 255)
+                );
+                
+                g2d.setColor(lighterPrimary);
+                g2d.fillOval(x, y, size, size);
+                
+                // Add slight shadow for depth
+                g2d.setColor(new Color(0, 0, 0, 30));
+                g2d.fillOval(x + 3, y + 3, size, size);
+                
+                // Main circle
+                g2d.setColor(PRIMARY_COLOR);
+                g2d.fillOval(x, y, size, size);
+                
+                // Draw improved checkmark with thicker stroke
+                g2d.setColor(Color.WHITE);
+                g2d.setStroke(new BasicStroke(8f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+                
+                // Adjust checkmark positioning for better appearance
+                int startX = x + size / 4;
+                int startY = y + size / 2 + size / 12;
+                int middleX = x + size / 2 - size / 12;
+                int middleY = y + size * 3/4;
+                int endX = x + size * 3/4 + size / 12;
+                int endY = y + size / 3;
+                
+                g2d.drawLine(startX, startY, middleX, middleY);
+                g2d.drawLine(middleX, middleY, endX, endY);
+                
+                // Add highlight for a glossy effect
+                g2d.setClip(new Ellipse2D.Float(x, y, size, size));
+                g2d.setPaint(new Color(255, 255, 255, 60));
+                g2d.fillOval(x + size/4, y - size/6, size, size/3);
+            }
+            
+            @Override
+            public Dimension getPreferredSize() {
+                return new Dimension(80, 80);
+            }
+        };
+        logoPanel.setOpaque(false);
+        logoPanel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        mainPanel.add(logoPanel);
         mainPanel.add(Box.createVerticalStrut(20));
 
         JLabel titleLabel = new JLabel("Welcome to To-Do", SwingConstants.CENTER);

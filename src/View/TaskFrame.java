@@ -24,6 +24,7 @@ import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+import java.util.ArrayList;
 
 import javax.swing.BorderFactory;
 import javax.swing.Box;
@@ -61,9 +62,11 @@ import javax.swing.event.DocumentListener;
 
 import Controller.CategoryController;
 import Controller.TaskController;
+import Controller.SubTaskController;
 import Model.Category;
 import Model.Task;
 import Model.Note;
+import Model.SubTask;
 import Controller.NoteController;
 
 public class TaskFrame extends JFrame {
@@ -306,6 +309,10 @@ public class TaskFrame extends JFrame {
     private JTextArea notesContentArea;
     private JComboBox<Category> notesCategoryComboBox;
     private Note currentNote;
+
+    // Inside the TaskFrame class, add a new field to keep track of subtasks
+    private List<SubTask> currentSubTasks = new ArrayList<>();
+    private JPanel subTasksPanel;
 
     public TaskFrame(int userId) {
         this.userId = userId;
@@ -1207,15 +1214,15 @@ public class TaskFrame extends JFrame {
         buttonsPanel.add(deleteButton);
         headerPanel.add(buttonsPanel, BorderLayout.EAST);
         
-        // Create a split panel for form and description
-        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
-        splitPane.setBorder(null);
-        splitPane.setDividerSize(5);
-        splitPane.setResizeWeight(0.4); // Let the right panel get more space when resizing
-        splitPane.setBackground(BACKGROUND_COLOR);
+        // Create a split panel for form and description/subtasks
+        JSplitPane horizontalSplitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
+        horizontalSplitPane.setBorder(null);
+        horizontalSplitPane.setDividerSize(5);
+        horizontalSplitPane.setResizeWeight(0.4); // Let the right panel get more space when resizing
+        horizontalSplitPane.setBackground(BACKGROUND_COLOR);
         
-        // Set initial divider location to 40% for form fields, 60% for description
-        splitPane.setDividerLocation(0.4);
+        // Set initial divider location to 40% for form fields, 60% for description and subtasks
+        horizontalSplitPane.setDividerLocation(0.4);
         
         // Left panel for form fields
         JPanel formPanel = new JPanel();
@@ -1261,6 +1268,42 @@ public class TaskFrame extends JFrame {
             BorderFactory.createLineBorder(BORDER_COLOR),
             BorderFactory.createEmptyBorder(8, 10, 8, 10)
         ));
+        
+        // Add a custom renderer for the status dropdown
+        statusComboBox.setRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value, int index, 
+                    boolean isSelected, boolean cellHasFocus) {
+                JPanel panel = new JPanel(new BorderLayout(10, 0));
+                
+                if (isSelected) {
+                    panel.setBackground(HOVER_COLOR);
+                } else {
+                    panel.setBackground(list.getBackground());
+                }
+                
+                String status = (String) value;
+                JLabel statusIcon = new JLabel(createStatusIcon(status));
+                panel.add(statusIcon, BorderLayout.WEST);
+                
+                JLabel textLabel = new JLabel(status);
+                textLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+                
+                // Set color based on status
+                if ("Completed".equals(status)) {
+                    textLabel.setForeground(COMPLETED_COLOR);
+                } else if ("In Progress".equals(status)) {
+                    textLabel.setForeground(PRIMARY_COLOR);
+                } else if ("Pending".equals(status)) {
+                    textLabel.setForeground(PENDING_COLOR);
+                }
+                
+                panel.add(textLabel, BorderLayout.CENTER);
+                
+                return panel;
+            }
+        });
+        
         formPanel.add(statusComboBox, gbc);
         
         gbc.gridy++;
@@ -1346,7 +1389,14 @@ public class TaskFrame extends JFrame {
         
         formPanel.add(newCategoryFieldPanel, gbc);
         
-        // Right panel for description area
+        // Right panel split into description and subtasks
+        JSplitPane rightSplitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
+        rightSplitPane.setBorder(null);
+        rightSplitPane.setDividerSize(5);
+        rightSplitPane.setResizeWeight(0.5); // Equal space for description and subtasks
+        rightSplitPane.setBackground(BACKGROUND_COLOR);
+        
+        // Description panel (top)
         JPanel descriptionPanel = new JPanel(new BorderLayout(0, 10));
         descriptionPanel.setBackground(BACKGROUND_COLOR);
         descriptionPanel.setBorder(new EmptyBorder(15, 15, 15, 15));
@@ -1367,14 +1417,203 @@ public class TaskFrame extends JFrame {
         ));
         descriptionPanel.add(descScrollPane, BorderLayout.CENTER);
         
-        // Add panels to split pane
-        splitPane.setLeftComponent(formPanel);
-        splitPane.setRightComponent(descriptionPanel);
+        // Subtasks panel (bottom)
+        JPanel subtasksContainer = new JPanel(new BorderLayout(0, 10));
+        subtasksContainer.setBackground(BACKGROUND_COLOR);
+        subtasksContainer.setBorder(new EmptyBorder(15, 15, 15, 15));
+        
+        JLabel subtasksLabel = new JLabel("Sub-Tasks");
+        subtasksLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        subtasksContainer.add(subtasksLabel, BorderLayout.NORTH);
+        
+        // Panel for adding new subtasks
+        JPanel addSubTaskPanel = new JPanel(new BorderLayout(5, 0));
+        addSubTaskPanel.setBackground(BACKGROUND_COLOR);
+        
+        JTextField newSubTaskField = new JTextField();
+        newSubTaskField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        newSubTaskField.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(BORDER_COLOR),
+            BorderFactory.createEmptyBorder(8, 10, 8, 10)
+        ));
+        newSubTaskField.putClientProperty("JTextField.placeholderText", "Add a sub-task...");
+        
+        JButton addSubTaskButton = new JButton("Add");
+        addSubTaskButton.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        addSubTaskButton.setFocusPainted(false);
+        addSubTaskButton.setBackground(PRIMARY_COLOR);
+        addSubTaskButton.setForeground(Color.WHITE);
+        addSubTaskButton.setBorder(BorderFactory.createEmptyBorder(8, 15, 8, 15));
+        addSubTaskButton.addActionListener(e -> {
+            String subtaskText = newSubTaskField.getText().trim();
+            if (!subtaskText.isEmpty() && taskList.getSelectedValue() != null) {
+                Task selectedTask = taskList.getSelectedValue();
+                SubTask newSubTask = SubTaskController.createAndGetSubTask(selectedTask.getTaskId(), subtaskText);
+                if (newSubTask != null) {
+                    currentSubTasks.add(newSubTask);
+                    updateSubTasksPanel();
+                    newSubTaskField.setText("");
+                }
+            } else if (subtaskText.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Subtask description cannot be empty", "Error", JOptionPane.ERROR_MESSAGE);
+            } else {
+                JOptionPane.showMessageDialog(this, "Save the task before adding subtasks", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+        
+        // Also allow adding subtasks by pressing Enter
+        newSubTaskField.addActionListener(e -> addSubTaskButton.doClick());
+        
+        addSubTaskPanel.add(newSubTaskField, BorderLayout.CENTER);
+        addSubTaskPanel.add(addSubTaskButton, BorderLayout.EAST);
+        
+        // Create the scrollable panel for subtasks
+        subTasksPanel = new JPanel();
+        subTasksPanel.setLayout(new BoxLayout(subTasksPanel, BoxLayout.Y_AXIS));
+        subTasksPanel.setBackground(BACKGROUND_COLOR);
+        
+        JScrollPane subtasksScrollPane = new JScrollPane(subTasksPanel);
+        subtasksScrollPane.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(BORDER_COLOR),
+            BorderFactory.createEmptyBorder(8, 8, 8, 8)
+        ));
+        subtasksScrollPane.getVerticalScrollBar().setUnitIncrement(16);
+        
+        // Add components to subtasks container
+        JPanel subTasksContentPanel = new JPanel(new BorderLayout(0, 10));
+        subTasksContentPanel.setBackground(BACKGROUND_COLOR);
+        subTasksContentPanel.add(addSubTaskPanel, BorderLayout.NORTH);
+        subTasksContentPanel.add(subtasksScrollPane, BorderLayout.CENTER);
+        
+        subtasksContainer.add(subTasksContentPanel, BorderLayout.CENTER);
+        
+        // Add panels to right split pane
+        rightSplitPane.setTopComponent(descriptionPanel);
+        rightSplitPane.setBottomComponent(subtasksContainer);
+        
+        // Add panels to horizontal split pane
+        horizontalSplitPane.setLeftComponent(formPanel);
+        horizontalSplitPane.setRightComponent(rightSplitPane);
         
         panel.add(headerPanel, BorderLayout.NORTH);
-        panel.add(splitPane, BorderLayout.CENTER);
+        panel.add(horizontalSplitPane, BorderLayout.CENTER);
         
         return panel;
+    }
+
+    // Add a method to create a subtask row
+    private JPanel createSubTaskRow(SubTask subTask) {
+        JPanel rowPanel = new JPanel(new BorderLayout(10, 0));
+        rowPanel.setBackground(BACKGROUND_COLOR);
+        rowPanel.setBorder(BorderFactory.createEmptyBorder(5, 0, 5, 0));
+        
+        // Checkbox for completion status
+        JCheckBox checkBox = new JCheckBox();
+        checkBox.setBackground(BACKGROUND_COLOR);
+        checkBox.setSelected(subTask.isCompleted());
+        checkBox.addActionListener(e -> {
+            boolean isCompleted = checkBox.isSelected();
+            subTask.setCompleted(isCompleted);
+            SubTaskController.updateSubTaskStatus(subTask.getSubTaskId(), isCompleted);
+            
+            // Update the label when checkbox is toggled
+            JLabel descLabel = (JLabel) rowPanel.getComponent(1);
+            updateSubTaskLabel(descLabel, subTask.getDescription(), isCompleted);
+        });
+        
+        rowPanel.add(checkBox, BorderLayout.WEST);
+        
+        // Use JLabel with edit icon instead of JTextField for properly displaying HTML
+        JPanel descriptionPanel = new JPanel(new BorderLayout(5, 0));
+        descriptionPanel.setBackground(BACKGROUND_COLOR);
+        
+        JLabel descLabel = new JLabel(subTask.getDescription());
+        descLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        descLabel.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(BORDER_COLOR),
+            BorderFactory.createEmptyBorder(5, 10, 5, 10)
+        ));
+        
+        // Apply strikethrough if completed
+        updateSubTaskLabel(descLabel, subTask.getDescription(), subTask.isCompleted());
+        
+        descriptionPanel.add(descLabel, BorderLayout.CENTER);
+        
+        // Add edit button
+        JButton editButton = new JButton("✎");
+        editButton.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        editButton.setForeground(PRIMARY_COLOR);
+        editButton.setBackground(BACKGROUND_COLOR);
+        editButton.setBorderPainted(false);
+        editButton.setFocusPainted(false);
+        editButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        editButton.addActionListener(e -> {
+            String currentDesc = subTask.getDescription();
+            String newDesc = JOptionPane.showInputDialog(this, 
+                "Edit subtask:", currentDesc);
+            
+            if (newDesc != null && !newDesc.trim().isEmpty()) {
+                subTask.setDescription(newDesc.trim());
+                SubTaskController.updateSubTaskDescription(subTask.getSubTaskId(), newDesc.trim());
+                updateSubTaskLabel(descLabel, newDesc.trim(), subTask.isCompleted());
+            }
+        });
+        
+        descriptionPanel.add(editButton, BorderLayout.EAST);
+        rowPanel.add(descriptionPanel, BorderLayout.CENTER);
+        
+        // Delete button
+        JButton deleteButton = new JButton("×");
+        deleteButton.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        deleteButton.setForeground(new Color(220, 53, 69));
+        deleteButton.setBackground(BACKGROUND_COLOR);
+        deleteButton.setBorderPainted(false);
+        deleteButton.setFocusPainted(false);
+        deleteButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        deleteButton.addActionListener(e -> {
+            int confirm = JOptionPane.showConfirmDialog(
+                this,
+                "Are you sure you want to delete this sub-task?",
+                "Confirm Delete",
+                JOptionPane.YES_NO_OPTION
+            );
+            
+            if (confirm == JOptionPane.YES_OPTION) {
+                if (SubTaskController.deleteSubTask(subTask.getSubTaskId())) {
+                    currentSubTasks.remove(subTask);
+                    updateSubTasksPanel();
+                }
+            }
+        });
+        
+        rowPanel.add(deleteButton, BorderLayout.EAST);
+        
+        return rowPanel;
+    }
+    
+    // Helper method to update label with strikethrough for completed subtasks
+    private void updateSubTaskLabel(JLabel label, String description, boolean isCompleted) {
+        if (isCompleted) {
+            label.setText("<html><strike>" + description + "</strike></html>");
+        } else {
+            // Remove any HTML tags if present
+            if (description.contains("<html>")) {
+                description = description.replaceAll("<[^>]*>", "");
+            }
+            label.setText(description);
+        }
+    }
+
+    // Add a method to update the subtasks panel
+    private void updateSubTasksPanel() {
+        subTasksPanel.removeAll();
+        
+        for (SubTask subTask : currentSubTasks) {
+            subTasksPanel.add(createSubTaskRow(subTask));
+        }
+        
+        subTasksPanel.revalidate();
+        subTasksPanel.repaint();
     }
 
     private void styleSearchField(JTextField field) {
@@ -1968,6 +2207,10 @@ public class TaskFrame extends JFrame {
             categoryComboBox.setSelectedIndex(0); // "No Category"
         }
         
+        // Load subtasks for this task from the database
+        currentSubTasks = SubTaskController.getSubTasksByTaskId(task.getTaskId());
+        updateSubTasksPanel();
+        
         // Enable delete button since a task is selected
         deleteButton.setEnabled(true);
         
@@ -2268,6 +2511,10 @@ public class TaskFrame extends JFrame {
         newCategoryField.setText("");
         taskList.clearSelection();
         deleteButton.setEnabled(false);
+        
+        // Clear subtasks
+        currentSubTasks.clear();
+        updateSubTasksPanel();
     }
     
     /**
@@ -2346,11 +2593,15 @@ public class TaskFrame extends JFrame {
         if (selectedTask == null) return;
 
         int confirm = JOptionPane.showConfirmDialog(this,
-            "Are you sure you want to delete this task?",
+            "Are you sure you want to delete this task and all its sub-tasks?",
             "Confirm Delete",
             JOptionPane.YES_NO_OPTION);
 
         if (confirm == JOptionPane.YES_OPTION) {
+            // Delete subtasks first (optional, since we use ON DELETE CASCADE in SQL)
+            SubTaskController.deleteSubTasksByTaskId(selectedTask.getTaskId());
+            
+            // Then delete the task
             if (TaskController.deleteTask(selectedTask.getTaskId())) {
                 loadTasks();
                 clearFields();

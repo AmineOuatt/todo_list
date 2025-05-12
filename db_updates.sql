@@ -31,4 +31,16 @@ CREATE TABLE IF NOT EXISTS notes (
     created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
     FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL
-); 
+);
+
+-- Add the subtasks table
+CREATE TABLE IF NOT EXISTS subtasks (
+    subtask_id INT AUTO_INCREMENT PRIMARY KEY,
+    task_id INT NOT NULL,
+    description VARCHAR(255) NOT NULL,
+    completed BOOLEAN DEFAULT FALSE,
+    FOREIGN KEY (task_id) REFERENCES tasks(task_id) ON DELETE CASCADE
+);
+
+-- Add indexes for better performance
+CREATE INDEX idx_subtasks_task_id ON subtasks(task_id); 
