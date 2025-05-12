@@ -63,6 +63,8 @@ import Controller.CategoryController;
 import Controller.TaskController;
 import Model.Category;
 import Model.Task;
+import Model.Note;
+import Controller.NoteController;
 
 public class TaskFrame extends JFrame {
     private int userId;
@@ -223,13 +225,30 @@ public class TaskFrame extends JFrame {
         }
     }
 
+    private DefaultListModel<Note> notesListModel;
+    private JList<Note> notesList;
+    private JTextField notesTitleField;
+    private JTextArea notesContentArea;
+    private JComboBox<Category> notesCategoryComboBox;
+    private Note currentNote;
+
     public TaskFrame(int userId) {
         this.userId = userId;
         
         setTitle("Task Manager");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        
+        // Ensure window opens in fullscreen mode
         setExtendedState(JFrame.MAXIMIZED_BOTH);
-
+        
+        // Set minimum size for the window
+        Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+        setMinimumSize(new Dimension(screenSize.width, screenSize.height));
+        setPreferredSize(screenSize);
+        
+        // Set location to center of screen
+        setLocationRelativeTo(null);
+        
         // Initialize the task list
         taskListModel = new DefaultListModel<>();
         taskList = new JList<>(taskListModel);
@@ -279,13 +298,24 @@ public class TaskFrame extends JFrame {
         // Create calendar panel - store the reference first
         calendarPanel = createCalendarPanel();
         
-        // Create placeholder panel for Notes - will be implemented later
+        // Create notes panel with split pane (list on left, details on right)
         JPanel notesPanel = new JPanel(new BorderLayout());
         notesPanel.setBackground(BACKGROUND_COLOR);
-        JLabel notesLabel = new JLabel("Notes feature coming soon", JLabel.CENTER);
-        notesLabel.setFont(new Font("Segoe UI", Font.BOLD, 24));
-        notesLabel.setForeground(TEXT_COLOR);
-        notesPanel.add(notesLabel, BorderLayout.CENTER);
+        JSplitPane notesSplitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
+        notesSplitPane.setDividerLocation(300);
+        notesSplitPane.setDividerSize(1);
+        notesSplitPane.setBorder(null);
+        notesSplitPane.setBackground(BACKGROUND_COLOR);
+        
+        // Create notes list panel (left side)
+        JPanel notesListPanel = createNotesListPanel();
+        notesSplitPane.setLeftComponent(notesListPanel);
+        
+        // Create note details panel (right side)
+        JPanel noteDetailsPanel = createNoteDetailsPanel();
+        notesSplitPane.setRightComponent(noteDetailsPanel);
+        
+        notesPanel.add(notesSplitPane, BorderLayout.CENTER);
         
         // Add panels to card layout
         mainContentPanel.add(tasksSplitPane, "TASKS");
@@ -299,6 +329,9 @@ public class TaskFrame extends JFrame {
         
         // Load tasks
         loadTasks();
+        
+        // Load notes
+        loadNotes();
         
         // Initialize timer for pomodoro
         initializePomodoroTimer();
@@ -2176,6 +2209,532 @@ public class TaskFrame extends JFrame {
             updateDashboard();
         } else {
             JOptionPane.showMessageDialog(this, "Failed to add task!", "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    /**
+     * Creates the notes list panel for the left side of the notes view
+     */
+    private JPanel createNotesListPanel() {
+        JPanel panel = new JPanel(new BorderLayout(0, 10));
+        panel.setBackground(SIDEBAR_COLOR);
+        panel.setPreferredSize(new Dimension(300, getHeight()));
+        panel.setBorder(BorderFactory.createMatteBorder(0, 0, 0, 1, BORDER_COLOR));
+        
+        // Header with title and add button
+        JPanel headerPanel = new JPanel(new BorderLayout(10, 0));
+        headerPanel.setBackground(SIDEBAR_COLOR);
+        headerPanel.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createMatteBorder(0, 0, 1, 0, BORDER_COLOR),
+            BorderFactory.createEmptyBorder(10, 10, 10, 10)
+        ));
+        
+        // Title label on the left
+        JLabel titleLabel = new JLabel("Notes");
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        titleLabel.setForeground(TEXT_COLOR);
+        
+        // Add button on the right
+        JButton newButton = new JButton("+ New");
+        newButton.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        newButton.setFocusPainted(false);
+        newButton.setBackground(PRIMARY_COLOR);
+        newButton.setForeground(Color.WHITE);
+        newButton.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
+        newButton.addActionListener(e -> {
+            clearNotesFields();
+            currentNote = null;
+        });
+        
+        // Panel for title and new button
+        JPanel titleButtonPanel = new JPanel(new BorderLayout(10, 0));
+        titleButtonPanel.setBackground(SIDEBAR_COLOR);
+        titleButtonPanel.add(titleLabel, BorderLayout.WEST);
+        titleButtonPanel.add(newButton, BorderLayout.EAST);
+        
+        headerPanel.add(titleButtonPanel, BorderLayout.NORTH);
+        
+        // Search field below the title
+        JPanel searchPanel = new JPanel(new BorderLayout(5, 0));
+        searchPanel.setBackground(SIDEBAR_COLOR);
+        searchPanel.setBorder(new EmptyBorder(10, 0, 0, 0));
+        
+        JLabel searchLabel = new JLabel("Search:");
+        searchLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        searchPanel.add(searchLabel, BorderLayout.WEST);
+        
+        JTextField searchField = new JTextField();
+        searchField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        styleSearchField(searchField);
+        searchField.putClientProperty("JTextField.placeholderText", "Search notes...");
+        
+        // Add document listener for search functionality
+        searchField.getDocument().addDocumentListener(new DocumentListener() {
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                filterNotes(searchField.getText());
+            }
+
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                filterNotes(searchField.getText());
+            }
+
+            @Override
+            public void changedUpdate(DocumentEvent e) {
+                filterNotes(searchField.getText());
+            }
+        });
+        
+        searchPanel.add(searchField, BorderLayout.CENTER);
+        headerPanel.add(searchPanel, BorderLayout.CENTER);
+        
+        // Filter options
+        JPanel filterPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
+        filterPanel.setBackground(SIDEBAR_COLOR);
+        
+        JLabel filterLabel = new JLabel("Filter:");
+        filterLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        filterPanel.add(filterLabel);
+        
+        JComboBox<Category> filterComboBox = new JComboBox<>();
+        filterComboBox.addItem(new Category(0, "All Notes"));
+        
+        // Load categories
+        List<Category> categories = CategoryController.getAllCategories();
+        for (Category category : categories) {
+            filterComboBox.addItem(category);
+        }
+        
+        filterComboBox.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        filterComboBox.setPreferredSize(new Dimension(120, 25));
+        filterComboBox.addActionListener(e -> {
+            Category selectedCategory = (Category) filterComboBox.getSelectedItem();
+            if (selectedCategory.getId() == 0) {
+                loadNotes(); // Load all notes
+            } else {
+                loadNotesByCategory(selectedCategory.getId()); // Load notes by category
+            }
+        });
+        
+        filterPanel.add(filterComboBox);
+        headerPanel.add(filterPanel, BorderLayout.SOUTH);
+        
+        // Notes list
+        notesListModel = new DefaultListModel<>();
+        notesList = new JList<>(notesListModel);
+        notesList.setCellRenderer(new NoteListCellRenderer());
+        notesList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        notesList.addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting()) {
+                Note selectedNote = notesList.getSelectedValue();
+                if (selectedNote != null) {
+                    displayNoteDetails(selectedNote);
+                }
+            }
+        });
+        
+        JScrollPane scrollPane = new JScrollPane(notesList);
+        scrollPane.setBorder(null);
+        scrollPane.getViewport().setBackground(SIDEBAR_COLOR);
+        
+        panel.add(headerPanel, BorderLayout.NORTH);
+        panel.add(scrollPane, BorderLayout.CENTER);
+        
+        return panel;
+    }
+
+    /**
+     * Custom cell renderer for notes list
+     */
+    private class NoteListCellRenderer extends DefaultListCellRenderer {
+        private SimpleDateFormat dateFormat = new SimpleDateFormat("MMM d, yyyy");
+        
+        @Override
+        public Component getListCellRendererComponent(
+                JList<?> list, Object value, int index,
+                boolean isSelected, boolean cellHasFocus) {
+            
+            super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+            
+            if (value instanceof Note) {
+                Note note = (Note) value;
+                
+                JPanel panel = new JPanel(new BorderLayout());
+                panel.setBackground(isSelected ? HOVER_COLOR : SIDEBAR_COLOR);
+                panel.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createMatteBorder(0, 0, 1, 0, BORDER_COLOR),
+                    BorderFactory.createEmptyBorder(15, 10, 15, 10)
+                ));
+                
+                JPanel headerRow = new JPanel(new BorderLayout());
+                headerRow.setBackground(isSelected ? HOVER_COLOR : SIDEBAR_COLOR);
+                
+                JLabel titleLabel = new JLabel(note.getTitle());
+                titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
+                titleLabel.setForeground(isSelected ? PRIMARY_COLOR : TEXT_COLOR);
+                headerRow.add(titleLabel, BorderLayout.WEST);
+                
+                if (note.getCategory() != null) {
+                    JLabel categoryLabel = new JLabel(note.getCategory().getName());
+                    categoryLabel.setFont(new Font("Segoe UI", Font.ITALIC, 12));
+                    categoryLabel.setForeground(PRIMARY_COLOR);
+                    headerRow.add(categoryLabel, BorderLayout.EAST);
+                }
+                
+                panel.add(headerRow, BorderLayout.NORTH);
+                
+                // Preview of content
+                String contentPreview = note.getContent();
+                if (contentPreview != null && contentPreview.length() > 50) {
+                    contentPreview = contentPreview.substring(0, 50) + "...";
+                }
+                
+                JLabel previewText = new JLabel(contentPreview);
+                previewText.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+                previewText.setForeground(Color.GRAY);
+                
+                panel.add(previewText, BorderLayout.CENTER);
+                
+                // Date at the bottom
+                if (note.getCreatedDate() != null) {
+                    JLabel dateLabel = new JLabel(dateFormat.format(note.getCreatedDate()));
+                    dateLabel.setFont(new Font("Segoe UI", Font.PLAIN, 10));
+                    dateLabel.setForeground(new Color(160, 160, 160));
+                    panel.add(dateLabel, BorderLayout.SOUTH);
+                }
+                
+                setText("");
+                setIcon(null);
+                
+                return panel;
+            }
+            
+            return this;
+        }
+    }
+
+    /**
+     * Creates the note details panel for editing notes
+     */
+    private JPanel createNoteDetailsPanel() {
+        JPanel panel = new JPanel(new BorderLayout(0, 10));
+        panel.setBackground(BACKGROUND_COLOR);
+        
+        // Note detail header
+        JPanel headerPanel = new JPanel(new BorderLayout());
+        headerPanel.setBackground(BACKGROUND_COLOR);
+        headerPanel.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, BORDER_COLOR));
+        
+        JLabel headerLabel = new JLabel("Note Details");
+        headerLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        headerLabel.setForeground(TEXT_COLOR);
+        headerPanel.add(headerLabel, BorderLayout.WEST);
+        
+        // Add panel to contain buttons
+        JPanel buttonsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        buttonsPanel.setBackground(BACKGROUND_COLOR);
+        
+        JButton clearButton = new JButton("Clear");
+        clearButton.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        clearButton.setFocusPainted(false);
+        clearButton.setBackground(HOVER_COLOR);
+        clearButton.setForeground(TEXT_COLOR);
+        clearButton.setBorder(BorderFactory.createEmptyBorder(5, 15, 5, 15));
+        clearButton.addActionListener(e -> clearNotesFields());
+        
+        JButton addButton = new JButton("Save Note");
+        addButton.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        addButton.setFocusPainted(false);
+        addButton.setBackground(PRIMARY_COLOR);
+        addButton.setForeground(Color.WHITE);
+        addButton.setBorder(BorderFactory.createEmptyBorder(5, 15, 5, 15));
+        addButton.addActionListener(e -> saveNote());
+        
+        JButton deleteButton = new JButton("Delete Note");
+        deleteButton.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        deleteButton.setFocusPainted(false);
+        deleteButton.setBackground(new Color(220, 53, 69));
+        deleteButton.setForeground(Color.WHITE);
+        deleteButton.setBorder(BorderFactory.createEmptyBorder(5, 15, 5, 15));
+        deleteButton.addActionListener(e -> deleteNote());
+        
+        buttonsPanel.add(clearButton);
+        buttonsPanel.add(addButton);
+        buttonsPanel.add(deleteButton);
+        headerPanel.add(buttonsPanel, BorderLayout.EAST);
+        
+        // Form panel for note details
+        JPanel formPanel = new JPanel();
+        formPanel.setLayout(new GridBagLayout());
+        formPanel.setBackground(BACKGROUND_COLOR);
+        
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.insets = new Insets(5, 0, 10, 0);
+        gbc.weightx = 1.0;
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        
+        // Title field
+        JLabel titleLabel = new JLabel("Title");
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        formPanel.add(titleLabel, gbc);
+        
+        gbc.gridy++;
+        notesTitleField = new JTextField();
+        notesTitleField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        notesTitleField.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(BORDER_COLOR),
+            BorderFactory.createEmptyBorder(8, 10, 8, 10)
+        ));
+        formPanel.add(notesTitleField, gbc);
+        
+        gbc.gridy++;
+        gbc.insets = new Insets(15, 0, 10, 0);
+        
+        // Category selection
+        JLabel categoryLabel = new JLabel("Category");
+        categoryLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        formPanel.add(categoryLabel, gbc);
+        
+        gbc.gridy++;
+        gbc.insets = new Insets(0, 0, 15, 0);
+        notesCategoryComboBox = new JComboBox<>();
+        
+        // Add "No Category" option
+        notesCategoryComboBox.addItem(new Category(0, "No Category"));
+        
+        // Load categories
+        List<Category> categories = CategoryController.getAllCategories();
+        for (Category category : categories) {
+            notesCategoryComboBox.addItem(category);
+        }
+        
+        notesCategoryComboBox.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        notesCategoryComboBox.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(BORDER_COLOR),
+            BorderFactory.createEmptyBorder(8, 10, 8, 10)
+        ));
+        formPanel.add(notesCategoryComboBox, gbc);
+        
+        // New Category section
+        gbc.gridy++;
+        gbc.insets = new Insets(5, 0, 10, 0);
+        
+        JLabel newCategoryLabel = new JLabel("New Category");
+        newCategoryLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        formPanel.add(newCategoryLabel, gbc);
+        
+        gbc.gridy++;
+        
+        JPanel newCategoryPanel = new JPanel(new BorderLayout(5, 0));
+        newCategoryPanel.setBackground(BACKGROUND_COLOR);
+        
+        JTextField newCategoryField = new JTextField();
+        newCategoryField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        newCategoryField.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(BORDER_COLOR),
+            BorderFactory.createEmptyBorder(8, 10, 8, 10)
+        ));
+        
+        JButton addCategoryButton = new JButton("Add");
+        addCategoryButton.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        addCategoryButton.setFocusPainted(false);
+        addCategoryButton.setBackground(PRIMARY_COLOR);
+        addCategoryButton.setForeground(Color.WHITE);
+        addCategoryButton.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
+        addCategoryButton.addActionListener(e -> {
+            String categoryName = newCategoryField.getText().trim();
+            if (!categoryName.isEmpty()) {
+                Category newCategory = CategoryController.createCategory(categoryName);
+                if (newCategory != null) {
+                    // Reload categories
+                    notesCategoryComboBox.addItem(newCategory);
+                    notesCategoryComboBox.setSelectedItem(newCategory);
+                    newCategoryField.setText("");
+                }
+            }
+        });
+        
+        newCategoryPanel.add(newCategoryField, BorderLayout.CENTER);
+        newCategoryPanel.add(addCategoryButton, BorderLayout.EAST);
+        
+        formPanel.add(newCategoryPanel, gbc);
+        
+        gbc.gridy++;
+        gbc.insets = new Insets(15, 0, 10, 0);
+        
+        // Description/Content area
+        JLabel contentLabel = new JLabel("Description");
+        contentLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        formPanel.add(contentLabel, gbc);
+        
+        gbc.gridy++;
+        gbc.weighty = 1.0;
+        gbc.fill = GridBagConstraints.BOTH;
+        notesContentArea = new JTextArea(8, 20);
+        notesContentArea.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        notesContentArea.setLineWrap(true);
+        notesContentArea.setWrapStyleWord(true);
+        
+        JScrollPane contentScroll = new JScrollPane(notesContentArea);
+        contentScroll.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(BORDER_COLOR),
+            BorderFactory.createEmptyBorder(8, 8, 8, 8)
+        ));
+        formPanel.add(contentScroll, gbc);
+        
+        panel.add(headerPanel, BorderLayout.NORTH);
+        panel.add(formPanel, BorderLayout.CENTER);
+        
+        return panel;
+    }
+
+    /**
+     * Load all notes for the current user
+     */
+    private void loadNotes() {
+        notesListModel.clear();
+        List<Note> notes = NoteController.getNotes(userId);
+        for (Note note : notes) {
+            notesListModel.addElement(note);
+        }
+    }
+
+    /**
+     * Load notes by category for the current user
+     */
+    private void loadNotesByCategory(int categoryId) {
+        notesListModel.clear();
+        List<Note> notes = NoteController.getNotesByCategory(userId, categoryId);
+        for (Note note : notes) {
+            notesListModel.addElement(note);
+        }
+    }
+
+    /**
+     * Filter notes by search text
+     */
+    private void filterNotes(String searchText) {
+        if (searchText.isEmpty()) {
+            loadNotes(); // Reload all notes
+            return;
+        }
+        
+        searchText = searchText.toLowerCase();
+        DefaultListModel<Note> filteredModel = new DefaultListModel<>();
+        List<Note> allNotes = NoteController.getNotes(userId);
+        
+        for (Note note : allNotes) {
+            if (note.getTitle().toLowerCase().contains(searchText) || 
+                (note.getContent() != null && note.getContent().toLowerCase().contains(searchText))) {
+                filteredModel.addElement(note);
+            }
+        }
+        
+        notesListModel = filteredModel;
+        notesList.setModel(notesListModel);
+    }
+
+    /**
+     * Display the details of a selected note
+     */
+    private void displayNoteDetails(Note note) {
+        currentNote = note;
+        notesTitleField.setText(note.getTitle());
+        notesContentArea.setText(note.getContent());
+        
+        // Set the category if available
+        if (note.getCategory() != null) {
+            for (int i = 0; i < notesCategoryComboBox.getItemCount(); i++) {
+                Category category = notesCategoryComboBox.getItemAt(i);
+                if (category.getId() == note.getCategory().getId()) {
+                    notesCategoryComboBox.setSelectedIndex(i);
+                    break;
+                }
+            }
+        } else {
+            notesCategoryComboBox.setSelectedIndex(0); // No Category
+        }
+    }
+
+    /**
+     * Clear the note form fields
+     */
+    private void clearNotesFields() {
+        notesTitleField.setText("");
+        notesContentArea.setText("");
+        notesCategoryComboBox.setSelectedIndex(0);
+        currentNote = null;
+    }
+
+    /**
+     * Save the current note (create new or update existing)
+     */
+    private void saveNote() {
+        String title = notesTitleField.getText().trim();
+        String content = notesContentArea.getText().trim();
+        
+        if (title.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Title cannot be empty", "Invalid Input", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        
+        // Get selected category
+        Category selectedCategory = (Category) notesCategoryComboBox.getSelectedItem();
+        if (selectedCategory.getId() == 0) {
+            selectedCategory = null; // No category selected
+        }
+        
+        boolean success;
+        
+        if (currentNote == null) {
+            // Create new note
+            if (selectedCategory != null) {
+                success = NoteController.createNote(userId, title, content, selectedCategory);
+            } else {
+                success = NoteController.createNote(userId, title, content);
+            }
+        } else {
+            // Update existing note
+            if (selectedCategory != null) {
+                success = NoteController.updateNote(currentNote.getNoteId(), title, content, selectedCategory);
+            } else {
+                success = NoteController.updateNote(currentNote.getNoteId(), title, content);
+            }
+        }
+        
+        if (success) {
+            loadNotes(); // Refresh the list
+            JOptionPane.showMessageDialog(this, "Note saved successfully", "Success", JOptionPane.INFORMATION_MESSAGE);
+        } else {
+            JOptionPane.showMessageDialog(this, "Failed to save note", "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    /**
+     * Delete the current note
+     */
+    private void deleteNote() {
+        if (currentNote == null) {
+            JOptionPane.showMessageDialog(this, "No note selected", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        
+        int confirm = JOptionPane.showConfirmDialog(this,
+            "Are you sure you want to delete this note?",
+            "Confirm Delete",
+            JOptionPane.YES_NO_OPTION);
+        
+        if (confirm == JOptionPane.YES_OPTION) {
+            if (NoteController.deleteNote(currentNote.getNoteId())) {
+                loadNotes(); // Refresh the list
+                clearNotesFields();
+                JOptionPane.showMessageDialog(this, "Note deleted successfully", "Success", JOptionPane.INFORMATION_MESSAGE);
+            } else {
+                JOptionPane.showMessageDialog(this, "Failed to delete note", "Error", JOptionPane.ERROR_MESSAGE);
+            }
         }
     }
 }
