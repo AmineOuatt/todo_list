@@ -1,11 +1,29 @@
 package View;
 
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Cursor;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.JButton;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JPasswordField;
+import javax.swing.JTextField;
+import javax.swing.border.EmptyBorder;
+
 import Controller.UserController;
 import Model.User;
-import java.awt.*;
-import java.awt.event.*;
-import javax.swing.*;
-import javax.swing.border.EmptyBorder;
 
 
 public class UserManagementView extends JFrame {
@@ -32,11 +50,18 @@ public class UserManagementView extends JFrame {
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setBackground(BACKGROUND_COLOR);
         
+        // Make the window fullscreen
+        setExtendedState(JFrame.MAXIMIZED_BOTH);
+        
+        // Main container with BorderLayout for better fullscreen experience
+        JPanel container = new JPanel(new BorderLayout());
+        container.setBackground(BACKGROUND_COLOR);
+        
         // Main panel
         JPanel mainPanel = new JPanel();
         mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.Y_AXIS));
         mainPanel.setBackground(CARD_COLOR);
-        mainPanel.setBorder(new EmptyBorder(20, 30, 20, 30));
+        mainPanel.setBorder(new EmptyBorder(50, 50, 50, 50));
         
         // Title
         JLabel titleLabel = new JLabel("Edit Profile");
@@ -44,7 +69,14 @@ public class UserManagementView extends JFrame {
         titleLabel.setForeground(TEXT_COLOR);
         titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         mainPanel.add(titleLabel);
-        mainPanel.add(Box.createVerticalStrut(20));
+        mainPanel.add(Box.createVerticalStrut(40));
+        
+        // Form Panel - Limit width for better appearance in fullscreen
+        JPanel formPanel = new JPanel();
+        formPanel.setLayout(new BoxLayout(formPanel, BoxLayout.Y_AXIS));
+        formPanel.setBackground(CARD_COLOR);
+        formPanel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        formPanel.setMaximumSize(new Dimension(600, Integer.MAX_VALUE));
         
         // Username field
         JPanel usernamePanel = new JPanel(new BorderLayout(10, 0));
@@ -55,8 +87,8 @@ public class UserManagementView extends JFrame {
         usernameField.setFont(BODY_FONT);
         usernamePanel.add(usernameLabel, BorderLayout.WEST);
         usernamePanel.add(usernameField, BorderLayout.CENTER);
-        mainPanel.add(usernamePanel);
-        mainPanel.add(Box.createVerticalStrut(15));
+        formPanel.add(usernamePanel);
+        formPanel.add(Box.createVerticalStrut(30));
         
         // Password field
         JPanel passwordPanel = new JPanel(new BorderLayout(10, 0));
@@ -67,49 +99,66 @@ public class UserManagementView extends JFrame {
         passwordField.setFont(BODY_FONT);
         passwordPanel.add(passwordLabel, BorderLayout.WEST);
         passwordPanel.add(passwordField, BorderLayout.CENTER);
-        mainPanel.add(passwordPanel);
-        mainPanel.add(Box.createVerticalStrut(25));
+        formPanel.add(passwordPanel);
+        formPanel.add(Box.createVerticalStrut(50));
         
         // Buttons panel
-        JPanel buttonsPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 0));
+        JPanel buttonsPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 0));
         buttonsPanel.setBackground(CARD_COLOR);
         
         // Save button
         saveButton = new JButton("Save Changes");
-        saveButton.setFont(BODY_FONT);
+        saveButton.setFont(new Font("Segoe UI", Font.BOLD, 16));
         saveButton.setForeground(Color.WHITE);
         saveButton.setBackground(ACCENT_COLOR);
-        saveButton.setBorder(BorderFactory.createEmptyBorder(8, 20, 8, 20));
+        saveButton.setBorder(BorderFactory.createEmptyBorder(12, 30, 12, 30));
         saveButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         saveButton.setFocusPainted(false);
         styleButton(saveButton, ACCENT_COLOR);
         
         // Delete button
         deleteButton = new JButton("Delete User");
-        deleteButton.setFont(BODY_FONT);
+        deleteButton.setFont(new Font("Segoe UI", Font.BOLD, 16));
         deleteButton.setForeground(Color.WHITE);
         deleteButton.setBackground(DANGER_COLOR);
-        deleteButton.setBorder(BorderFactory.createEmptyBorder(8, 20, 8, 20));
+        deleteButton.setBorder(BorderFactory.createEmptyBorder(12, 30, 12, 30));
         deleteButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         deleteButton.setFocusPainted(false);
         styleButton(deleteButton, DANGER_COLOR);
         
+        // Back button
+        JButton backButton = new JButton("Back");
+        backButton.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        backButton.setForeground(TEXT_COLOR);
+        backButton.setBackground(BACKGROUND_COLOR);
+        backButton.setBorder(BorderFactory.createEmptyBorder(12, 30, 12, 30));
+        backButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        backButton.setFocusPainted(false);
+        styleButton(backButton, BACKGROUND_COLOR);
+        backButton.addActionListener(e -> dispose());
+        
+        buttonsPanel.add(backButton);
         buttonsPanel.add(saveButton);
         buttonsPanel.add(deleteButton);
-        mainPanel.add(buttonsPanel);
+        formPanel.add(buttonsPanel);
+        
+        // Add form panel to main panel
+        mainPanel.add(formPanel);
         
         // Add action listeners
         saveButton.addActionListener(e -> handleSave());
         deleteButton.addActionListener(e -> handleDelete());
         
-        // Add main panel to frame
-        getContentPane().add(mainPanel);
+        // Add main panel to container and center it
+        container.add(Box.createHorizontalStrut(50), BorderLayout.WEST);
+        container.add(mainPanel, BorderLayout.CENTER);
+        container.add(Box.createHorizontalStrut(50), BorderLayout.EAST);
         
-        // Set up frame
-        pack();
-        setSize(400, 300);
-        setLocationRelativeTo(null);
-        setResizable(false);
+        // Add container to frame
+        getContentPane().add(container);
+        
+        // Make the frame visible immediately
+        setResizable(true);
     }
     
     private void styleButton(JButton button, Color baseColor) {

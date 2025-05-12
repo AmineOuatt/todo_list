@@ -1,15 +1,68 @@
 package View;
 
-import Controller.TaskController;
-import Model.Task;
-import java.awt.*;
-import java.awt.event.*;
+import java.awt.BasicStroke;
+import java.awt.BorderLayout;
+import java.awt.CardLayout;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Cursor;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.FontMetrics;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.GridLayout;
+import java.awt.Insets;
+import java.awt.RenderingHints;
+import java.awt.Toolkit;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
-import javax.swing.*;
+
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.DefaultListCellRenderer;
+import javax.swing.DefaultListModel;
+import javax.swing.Icon;
+import javax.swing.JButton;
+import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
+import javax.swing.JComponent;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JList;
+import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
+import javax.swing.JScrollPane;
+import javax.swing.JSeparator;
+import javax.swing.JSpinner;
+import javax.swing.JSplitPane;
+import javax.swing.JTextArea;
+import javax.swing.JTextField;
+import javax.swing.ListSelectionModel;
+import javax.swing.SpinnerDateModel;
+import javax.swing.SpinnerModel;
+import javax.swing.SpinnerNumberModel;
+import javax.swing.SwingConstants;
+import javax.swing.Timer;
+import javax.swing.UIManager;
 import javax.swing.border.EmptyBorder;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
+
+import Controller.CategoryController;
+import Controller.TaskController;
+import Model.Category;
+import Model.Task;
 
 public class TaskFrame extends JFrame {
     private int userId;
@@ -20,6 +73,9 @@ public class TaskFrame extends JFrame {
     private JTextArea descriptionField;
     private JComboBox<String> statusComboBox;
     private JSpinner dueDateSpinner;
+    private JComboBox<Category> categoryComboBox;
+    private JTextField newCategoryField;
+    private JButton addCategoryButton;
     
     // Pomodoro components
     private Timer pomodoroTimer;
@@ -84,79 +140,176 @@ public class TaskFrame extends JFrame {
         }
     }
 
+    // Inner class for circular progress
+    private class CircularProgressPanel extends JPanel {
+        private double progress = 0.0;
+
+        public void setProgress(double progress) {
+            this.progress = progress;
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            super.paintComponent(g);
+            Graphics2D g2 = (Graphics2D) g;
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+            int size = Math.min(getWidth(), getHeight()) - 40;
+            int x = (getWidth() - size) / 2;
+            int y = (getHeight() - size) / 2;
+
+            // Draw background circle
+            g2.setColor(new Color(240, 240, 240));
+            g2.setStroke(new BasicStroke(10));
+            g2.drawArc(x, y, size, size, 0, 360);
+
+            // Draw progress
+            g2.setColor(currentPomodoroColor);
+            g2.drawArc(x, y, size, size, 90, -(int) (progress * 360));
+        }
+    }
+
+    // Custom cell renderer for tasks
+    private class TaskListCellRenderer extends DefaultListCellRenderer {
+        @Override
+        public Component getListCellRendererComponent(
+                JList<?> list, Object value, int index,
+                boolean isSelected, boolean cellHasFocus) {
+            
+            super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+            
+            if (value instanceof Task) {
+                Task task = (Task) value;
+                String title = task.getTitle();
+                String status = task.getStatus();
+                String categoryText = "";
+                
+                // Add category information if available
+                if (task.getCategory() != null) {
+                    categoryText = " [" + task.getCategory().getName() + "]";
+                }
+                
+                setText(title + categoryText);
+                
+                // Set icon based on status
+                if ("Completed".equals(status)) {
+                    setIcon(UIManager.getIcon("CheckBox.icon"));
+                    setFont(getFont().deriveFont(Font.PLAIN));
+                } else {
+                    setIcon(UIManager.getIcon("Tree.leafIcon"));
+                    setFont(getFont().deriveFont(Font.BOLD));
+                }
+                
+                if (isSelected) {
+                    setBackground(HOVER_COLOR);
+                    setForeground(PRIMARY_COLOR);
+                } else {
+                    setBackground(Color.WHITE);
+                    
+                    if ("Completed".equals(status)) {
+                        setForeground(Color.GRAY);
+                    } else {
+                        setForeground(TEXT_COLOR);
+                    }
+                }
+                
+                setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createMatteBorder(0, 0, 1, 0, BORDER_COLOR),
+                    BorderFactory.createEmptyBorder(10, 10, 10, 10)
+                ));
+            }
+            
+            return this;
+        }
+    }
+
     public TaskFrame(int userId) {
         this.userId = userId;
+        
         setTitle("Task Manager");
-        setSize(1200, 800);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setLocationRelativeTo(null);
-        getContentPane().setBackground(BACKGROUND_COLOR);
+        setExtendedState(JFrame.MAXIMIZED_BOTH);
 
-        // Initialize task list components
+        // Initialize the task list
         taskListModel = new DefaultListModel<>();
         taskList = new JList<>(taskListModel);
         taskList.setCellRenderer(new TaskListCellRenderer());
         taskList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-
-        // Create main container
-        JPanel mainContainer = new JPanel(new BorderLayout());
-        mainContainer.setBackground(BACKGROUND_COLOR);
-
-        // Create sidebar container
-        JPanel sidebarContainer = new JPanel(new BorderLayout());
-        sidebarContainer.setPreferredSize(new Dimension(250, getHeight()));
-        sidebarContainer.setBackground(SIDEBAR_COLOR);
-        sidebarContainer.setBorder(BorderFactory.createMatteBorder(0, 0, 0, 1, BORDER_COLOR));
-
-        // Create navigation panel
-        navigationPanel = createNavigationPanel();
-        sidebarContainer.add(navigationPanel, BorderLayout.NORTH);
-
-        // Create main content panel with CardLayout
-        mainContentPanel = new JPanel(new CardLayout());
-        mainContentPanel.setBackground(BACKGROUND_COLOR);
-
-        // Create task details panel
-        JPanel taskDetailsPanel = new JPanel(new BorderLayout());
-        taskDetailsPanel.setBackground(BACKGROUND_COLOR);
-
-        // Add task list panel
-        JPanel taskListPanel = createTaskListPanel();
-        taskDetailsPanel.add(taskListPanel, BorderLayout.WEST);
-
-        // Add task details form
-        JPanel detailsForm = createTaskDetailsPanel();
-        taskDetailsPanel.add(detailsForm, BorderLayout.CENTER);
-
-        // Add panels to card layout
-        mainContentPanel.add(taskDetailsPanel, "TASKS");
-        mainContentPanel.add(createPomodoroPanel(), "POMODORO");
-        mainContentPanel.add(createDashboardPanel(), "DASHBOARD");
-
-        // Add sidebar and main content to main container
-        mainContainer.add(sidebarContainer, BorderLayout.WEST);
-        mainContainer.add(mainContentPanel, BorderLayout.CENTER);
-
-        // Add main container to frame
-        add(mainContainer);
-        
-        initializePomodoroTimer();
-        loadTasks();
-        updateDashboard();
-
-        // Add selection listener for task list
         taskList.addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting()) {
                 Task selectedTask = taskList.getSelectedValue();
                 if (selectedTask != null) {
-                    titleField.setText(selectedTask.getTitle());
-                    descriptionField.setText(selectedTask.getDescription());
-                    statusComboBox.setSelectedItem(selectedTask.getStatus());
-                    dueDateSpinner.setValue(selectedTask.getDueDate() != null ? 
-                        selectedTask.getDueDate() : new Date());
+                    displayTaskDetails(selectedTask);
                 }
             }
         });
+        
+        // Create the main layout
+        setLayout(new BorderLayout());
+        
+        // Create navigation sidebar
+        navigationPanel = createNavigationPanel();
+        add(navigationPanel, BorderLayout.WEST);
+        
+        // Create main content panel with card layout
+        mainContentPanel = new JPanel(new CardLayout());
+        mainContentPanel.setBackground(BACKGROUND_COLOR);
+        
+        // Create task view with split pane (list on left, details on right)
+        JSplitPane tasksSplitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
+        tasksSplitPane.setDividerLocation(300);
+        tasksSplitPane.setDividerSize(1);
+        tasksSplitPane.setBorder(null);
+        tasksSplitPane.setBackground(BACKGROUND_COLOR);
+        
+        // Create task list panel (left side)
+        JPanel taskListPanel = createTaskListPanel();
+        tasksSplitPane.setLeftComponent(taskListPanel);
+        
+        // Create task details panel (right side)
+        JPanel taskDetailsPanel = createTaskDetailsPanel();
+        tasksSplitPane.setRightComponent(taskDetailsPanel);
+        
+        // Create pomodoro panel
+        pomodoroPanel = createPomodoroPanel();
+        
+        // Create dashboard panel
+        dashboardPanel = createDashboardPanel();
+        
+        // Create calendar panel - store the reference first
+        calendarPanel = createCalendarPanel();
+        
+        // Create placeholder panel for Notes - will be implemented later
+        JPanel notesPanel = new JPanel(new BorderLayout());
+        notesPanel.setBackground(BACKGROUND_COLOR);
+        JLabel notesLabel = new JLabel("Notes feature coming soon", JLabel.CENTER);
+        notesLabel.setFont(new Font("Segoe UI", Font.BOLD, 24));
+        notesLabel.setForeground(TEXT_COLOR);
+        notesPanel.add(notesLabel, BorderLayout.CENTER);
+        
+        // Add panels to card layout
+        mainContentPanel.add(tasksSplitPane, "TASKS");
+        mainContentPanel.add(pomodoroPanel, "POMODORO");
+        mainContentPanel.add(dashboardPanel, "DASHBOARD");
+        mainContentPanel.add(calendarPanel, "CALENDAR");
+        mainContentPanel.add(notesPanel, "NOTES");
+        
+        // Add main content panel to frame
+        add(mainContentPanel, BorderLayout.CENTER);
+        
+        // Load tasks
+        loadTasks();
+        
+        // Initialize timer for pomodoro
+        initializePomodoroTimer();
+        
+        // Now that everything is set up, we can update the calendar
+        updateCalendar();
+        
+        // Show tasks panel by default
+        showPanel("TASKS");
+        
+        pack();
     }
 
     private JPanel createNavigationPanel() {
@@ -173,30 +326,30 @@ public class TaskFrame extends JFrame {
         panel.add(logoLabel);
         panel.add(Box.createVerticalStrut(25));
 
-        // Create navigation sections
-        String[][] sections = {
-            {"TASKS", "📝 All Tasks", "📅 Today", "⭐ Important"},
-            {"LISTS", "📁 Personal", "💼 Work", "🎓 Study"},
-            {"TOOLS", "⏱️ Pomodoro", "📊 Dashboard", "📈 Statistics"}
-        };
+        // Create simplified navigation with four options including Notes
+        String[] navItems = {"📝 Tasks", "⏱️ Pomodoro", "📊 Dashboard", "📅 Calendar", "📝 Notes"};
+        String[] navActions = {"TASKS", "POMODORO", "DASHBOARD", "CALENDAR", "NOTES"};
 
-        for (String[] section : sections) {
-            // Add section header
-            JLabel sectionLabel = new JLabel(section[0]);
-            sectionLabel.setFont(new Font("Segoe UI", Font.BOLD, 12));
-            sectionLabel.setForeground(new Color(145, 145, 145));
-            sectionLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-            panel.add(sectionLabel);
-            panel.add(Box.createVerticalStrut(10));
-
-            // Add section items
-            for (int i = 1; i < section.length; i++) {
-                JButton button = new JButton(section[i]);
-                styleNavigationButton(button);
-                panel.add(button);
-                panel.add(Box.createVerticalStrut(5));
+        for (int i = 0; i < navItems.length; i++) {
+            JButton button = new JButton(navItems[i]);
+            styleNavigationButton(button);
+            final String action = navActions[i];
+            button.addActionListener(e -> showPanel(action));
+            panel.add(button);
+            panel.add(Box.createVerticalStrut(5));
+            
+            // Store references to these buttons for selection highlighting
+            if (i == 0) {
+                // Task button
+            } else if (i == 1) {
+                pomodoroButton = button;
+            } else if (i == 2) {
+                dashboardButton = button;
+            } else if (i == 3) {
+                calendarButton = button;
+            } else if (i == 4) {
+                // Notes button
             }
-            panel.add(Box.createVerticalStrut(20));
         }
 
         panel.add(Box.createVerticalGlue());
@@ -882,326 +1035,206 @@ public class TaskFrame extends JFrame {
     }
 
     private JPanel createTaskDetailsPanel() {
-        JPanel panel = new JPanel(new BorderLayout(0, 20));
+        JPanel panel = new JPanel(new BorderLayout(0, 10));
         panel.setBackground(BACKGROUND_COLOR);
-        panel.setBorder(BorderFactory.createEmptyBorder(20, 30, 20, 30));
-
-        // Top section with title and actions
-        JPanel topSection = new JPanel(new BorderLayout(15, 0));
-        topSection.setBackground(BACKGROUND_COLOR);
         
-        // Title field
-        titleField = new JTextField();
-        titleField.setFont(new Font("Segoe UI", Font.BOLD, 20));
-        styleTextField(titleField);
-        topSection.add(titleField, BorderLayout.CENTER);
-
-        // Action buttons
-        JPanel actionButtons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
-        actionButtons.setBackground(BACKGROUND_COLOR);
-        
-        addButton = new JButton("Save");
-        deleteButton = new JButton("Delete");
-        styleButton(addButton, true);
-        styleButton(deleteButton, false);
-        
-        actionButtons.add(deleteButton);
-        actionButtons.add(addButton);
-        topSection.add(actionButtons, BorderLayout.EAST);
-
-        // Main content panel
-        JPanel contentPanel = new JPanel();
-        contentPanel.setLayout(new BoxLayout(contentPanel, BoxLayout.Y_AXIS));
-        contentPanel.setBackground(BACKGROUND_COLOR);
-
-        // Description section
-        JPanel descriptionSection = createDetailSection("Description");
-        descriptionField = new JTextArea(5, 20);
-        styleTextArea(descriptionField);
-        JScrollPane descScrollPane = new JScrollPane(descriptionField);
-        descScrollPane.setBorder(null);
-        descriptionSection.add(descScrollPane);
-        contentPanel.add(descriptionSection);
-        contentPanel.add(Box.createVerticalStrut(20));
-
-        // Due date section
-        JPanel dateSection = createDetailSection("Due Date");
-        dueDateSpinner = new JSpinner(new SpinnerDateModel());
-        styleDateSpinner(dueDateSpinner);
-        dateSection.add(dueDateSpinner);
-        contentPanel.add(dateSection);
-        contentPanel.add(Box.createVerticalStrut(20));
-
-        // Status section
-        JPanel statusSection = createDetailSection("Status");
-        String[] statuses = {"Not Started", "In Progress", "Completed"};
-        statusComboBox = new JComboBox<>(statuses);
-        styleComboBox(statusComboBox);
-        statusSection.add(statusComboBox);
-        contentPanel.add(statusSection);
-
-        // Add components to main panel
-        panel.add(topSection, BorderLayout.NORTH);
-        panel.add(contentPanel, BorderLayout.CENTER);
-
-        return panel;
-    }
-
-    private JPanel createDetailSection(String title) {
-        JPanel section = new JPanel();
-        section.setLayout(new BoxLayout(section, BoxLayout.Y_AXIS));
-        section.setBackground(BACKGROUND_COLOR);
-        section.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        JLabel titleLabel = new JLabel(title);
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        titleLabel.setForeground(new Color(115, 115, 115));
-        titleLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 10, 0));
-        
-        section.add(titleLabel);
-        return section;
-    }
-
-    private void styleTextField(JTextField field) {
-        field.setBackground(BACKGROUND_COLOR);
-        field.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createMatteBorder(0, 0, 1, 0, BORDER_COLOR),
-            BorderFactory.createEmptyBorder(5, 0, 5, 0)
-        ));
-        field.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        field.setForeground(TEXT_COLOR);
-    }
-
-    private void styleTextArea(JTextArea area) {
-        area.setBackground(BACKGROUND_COLOR);
-        area.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(BORDER_COLOR),
-            BorderFactory.createEmptyBorder(10, 10, 10, 10)
-        ));
-        area.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        area.setForeground(TEXT_COLOR);
-        area.setLineWrap(true);
-        area.setWrapStyleWord(true);
-    }
-
-    private void styleButton(JButton button, boolean isPrimary) {
-        button.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        button.setForeground(isPrimary ? Color.WHITE : TEXT_COLOR);
-        button.setBackground(isPrimary ? PRIMARY_COLOR : BACKGROUND_COLOR);
-        button.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(isPrimary ? PRIMARY_COLOR : BORDER_COLOR),
-            BorderFactory.createEmptyBorder(8, 16, 8, 16)
-        ));
-        button.setFocusPainted(false);
-        button.setCursor(new Cursor(Cursor.HAND_CURSOR));
-
-        button.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                if (isPrimary) {
-                    button.setBackground(button.getBackground().darker());
-                } else {
-                    button.setBackground(HOVER_COLOR);
-                }
-            }
-
-            @Override
-            public void mouseExited(MouseEvent e) {
-                button.setBackground(isPrimary ? PRIMARY_COLOR : BACKGROUND_COLOR);
-            }
-        });
-    }
-
-    private void styleComboBox(JComboBox<?> comboBox) {
-        comboBox.setBackground(BACKGROUND_COLOR);
-        comboBox.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        comboBox.setForeground(TEXT_COLOR);
-        comboBox.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(BORDER_COLOR),
-            BorderFactory.createEmptyBorder(5, 10, 5, 10)
-        ));
-        ((JComponent) comboBox.getRenderer()).setBackground(BACKGROUND_COLOR);
-    }
-
-    private void styleDateSpinner(JSpinner spinner) {
-        spinner.setBackground(BACKGROUND_COLOR);
-        spinner.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(BORDER_COLOR),
-            BorderFactory.createEmptyBorder(5, 10, 5, 10)
-        ));
-        
-        JSpinner.DateEditor editor = new JSpinner.DateEditor(spinner, "MMM d, yyyy");
-        spinner.setEditor(editor);
-        editor.getTextField().setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        editor.getTextField().setForeground(TEXT_COLOR);
-        editor.getTextField().setBackground(BACKGROUND_COLOR);
-    }
-
-    private void loadTasks() {
-        taskListModel.clear();
-        List<Task> tasks = TaskController.getTasks(userId);
-        for (Task task : tasks) {
-            taskListModel.addElement(task);
-        }
-    }
-
-    private void handleAddTask() {
-        String title = titleField.getText().trim();
-        String description = descriptionField.getText().trim();
-        String status = (String) statusComboBox.getSelectedItem();
-        Date dueDate = (Date) dueDateSpinner.getValue();
-
-        if (title.isEmpty()) {
-            JOptionPane.showMessageDialog(this,
-                "Please enter a title for the task",
-                "Error",
-                JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-
-        if (TaskController.createTask(userId, title, description, status, dueDate)) {
-            loadTasks();
-            clearFields();
-        } else {
-            JOptionPane.showMessageDialog(this,
-                "Failed to create task",
-                "Error",
-                JOptionPane.ERROR_MESSAGE);
-        }
-    }
-
-    private void handleUpdateTask() {
-        Task selectedTask = taskList.getSelectedValue();
-        if (selectedTask == null) return;
-
-        String title = titleField.getText().trim();
-        String description = descriptionField.getText().trim();
-            String status = (String) statusComboBox.getSelectedItem();
-        Date dueDate = (Date) dueDateSpinner.getValue();
-
-        if (title.isEmpty()) {
-            JOptionPane.showMessageDialog(this,
-                "Please enter a title for the task",
-                "Error",
-                JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-
-        if (TaskController.updateTask(selectedTask.getTaskId(), title, description, status, dueDate)) {
-            loadTasks();
-        } else {
-            JOptionPane.showMessageDialog(this,
-                "Failed to update task",
-                "Error",
-                JOptionPane.ERROR_MESSAGE);
-        }
-    }
-
-    private void handleDeleteTask() {
-        Task selectedTask = taskList.getSelectedValue();
-        if (selectedTask == null) return;
-
-        int confirm = JOptionPane.showConfirmDialog(this,
-            "Are you sure you want to delete this task?",
-            "Confirm Delete",
-            JOptionPane.YES_NO_OPTION);
-
-        if (confirm == JOptionPane.YES_OPTION) {
-            if (TaskController.deleteTask(selectedTask.getTaskId())) {
-                loadTasks();
-                clearFields();
-            } else {
-                JOptionPane.showMessageDialog(this,
-                    "Failed to delete task",
-                    "Error",
-                    JOptionPane.ERROR_MESSAGE);
-            }
-        }
-    }
-
-    private void clearFields() {
-        titleField.setText("");
-        descriptionField.setText("");
-        statusComboBox.setSelectedIndex(0);
-        dueDateSpinner.setValue(new Date());
-    }
-
-    // Custom cell renderer for tasks
-    private class TaskListCellRenderer extends DefaultListCellRenderer {
-        @Override
-        public Component getListCellRendererComponent(
-                JList<?> list, Object value, int index,
-                boolean isSelected, boolean cellHasFocus) {
-            
-            Task task = (Task) value;
-            JPanel panel = new JPanel(new BorderLayout(10, 0));
-            panel.setBorder(BorderFactory.createEmptyBorder(8, 15, 8, 15));
-            
-            if (isSelected) {
-                panel.setBackground(HOVER_COLOR);
-            } else {
-                panel.setBackground(BACKGROUND_COLOR);
-            }
-
-            // Checkbox for completion status
-            JCheckBox checkbox = new JCheckBox();
-            checkbox.setSelected("Completed".equals(task.getStatus()));
-            checkbox.setBackground(panel.getBackground());
-            panel.add(checkbox, BorderLayout.WEST);
-
-            // Task details panel
-            JPanel detailsPanel = new JPanel(new GridLayout(2, 1, 0, 2));
-            detailsPanel.setBackground(panel.getBackground());
-
-            // Task title
-            JLabel titleLabel = new JLabel(task.getTitle());
-            titleLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-            titleLabel.setForeground(TEXT_COLOR);
-            
-            // Task metadata (due date, etc)
-            JLabel metaLabel = new JLabel(formatDueDate(task.getDueDate()));
-            metaLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-            metaLabel.setForeground(new Color(145, 145, 145));
-
-            detailsPanel.add(titleLabel);
-            detailsPanel.add(metaLabel);
-            panel.add(detailsPanel, BorderLayout.CENTER);
-
-            return panel;
-        }
-    }
-
-    private JPanel createTaskListPanel() {
-        JPanel panel = new JPanel(new BorderLayout());
-        panel.setBackground(BACKGROUND_COLOR);
-        panel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 1));
-
-        // Create header with search
+        // Task detail header
         JPanel headerPanel = new JPanel(new BorderLayout());
         headerPanel.setBackground(BACKGROUND_COLOR);
-        headerPanel.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createMatteBorder(0, 0, 1, 0, BORDER_COLOR),
-            BorderFactory.createEmptyBorder(15, 20, 15, 20)
-        ));
-
-        // Add search field
-        JTextField searchField = new JTextField();
-        searchField.setPreferredSize(new Dimension(200, 35));
-        styleSearchField(searchField);
-        headerPanel.add(searchField, BorderLayout.CENTER);
-
-        // Task list with custom renderer
-        taskList.setBackground(BACKGROUND_COLOR);
-        taskList.setBorder(null);
-        taskList.setFixedCellHeight(60);
+        headerPanel.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, BORDER_COLOR));
         
-        JScrollPane scrollPane = new JScrollPane(taskList);
-        scrollPane.setBorder(null);
-        scrollPane.getViewport().setBackground(BACKGROUND_COLOR);
-
+        JLabel headerLabel = new JLabel("Task Details");
+        headerLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        headerLabel.setForeground(TEXT_COLOR);
+        headerPanel.add(headerLabel, BorderLayout.WEST);
+        
+        // Add panel to contain buttons
+        JPanel buttonsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        buttonsPanel.setBackground(BACKGROUND_COLOR);
+        
+        JButton saveButton = new JButton("Save");
+        saveButton.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        saveButton.setFocusPainted(false);
+        saveButton.setBackground(PRIMARY_COLOR);
+        saveButton.setForeground(Color.WHITE);
+        saveButton.setBorder(BorderFactory.createEmptyBorder(5, 15, 5, 15));
+        saveButton.addActionListener(e -> handleUpdateTask());
+        
+        deleteButton = new JButton("Delete");
+        deleteButton.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        deleteButton.setFocusPainted(false);
+        deleteButton.setBackground(new Color(220, 53, 69));
+        deleteButton.setForeground(Color.WHITE);
+        deleteButton.setBorder(BorderFactory.createEmptyBorder(5, 15, 5, 15));
+        deleteButton.addActionListener(e -> handleDeleteTask());
+        
+        JButton clearButton = new JButton("Clear");
+        clearButton.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        clearButton.setFocusPainted(false);
+        clearButton.setBackground(HOVER_COLOR);
+        clearButton.setForeground(TEXT_COLOR);
+        clearButton.setBorder(BorderFactory.createEmptyBorder(5, 15, 5, 15));
+        clearButton.addActionListener(e -> clearFields());
+        
+        buttonsPanel.add(clearButton);
+        buttonsPanel.add(saveButton);
+        buttonsPanel.add(deleteButton);
+        headerPanel.add(buttonsPanel, BorderLayout.EAST);
+        
+        // Form panel
+        JPanel formPanel = new JPanel();
+        formPanel.setLayout(new GridBagLayout());
+        formPanel.setBackground(BACKGROUND_COLOR);
+        
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.insets = new Insets(5, 0, 10, 0);
+        gbc.weightx = 1.0;
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        
+        // Title field
+        JLabel titleLabel = new JLabel("Title");
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        formPanel.add(titleLabel, gbc);
+        
+        gbc.gridy++;
+        titleField = new JTextField();
+        titleField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        titleField.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(BORDER_COLOR),
+            BorderFactory.createEmptyBorder(8, 10, 8, 10)
+        ));
+        formPanel.add(titleField, gbc);
+        
+        gbc.gridy++;
+        gbc.insets = new Insets(15, 0, 10, 0);
+        
+        // Status selection
+        JLabel statusLabel = new JLabel("Status");
+        statusLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        formPanel.add(statusLabel, gbc);
+        
+        gbc.gridy++;
+        gbc.insets = new Insets(0, 0, 15, 0);
+        String[] statuses = {"Pending", "In Progress", "Completed"};
+        statusComboBox = new JComboBox<>(statuses);
+        statusComboBox.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        statusComboBox.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(BORDER_COLOR),
+            BorderFactory.createEmptyBorder(8, 10, 8, 10)
+        ));
+        formPanel.add(statusComboBox, gbc);
+        
+        gbc.gridy++;
+        gbc.insets = new Insets(5, 0, 10, 0);
+        
+        // Due Date field
+        JLabel dueDateLabel = new JLabel("Due Date");
+        dueDateLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        formPanel.add(dueDateLabel, gbc);
+        
+        gbc.gridy++;
+        gbc.insets = new Insets(0, 0, 15, 0);
+        SpinnerDateModel dateModel = new SpinnerDateModel();
+        dueDateSpinner = new JSpinner(dateModel);
+        JSpinner.DateEditor dateEditor = new JSpinner.DateEditor(dueDateSpinner, "dd/MM/yyyy");
+        dueDateSpinner.setEditor(dateEditor);
+        dueDateSpinner.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        dueDateSpinner.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(BORDER_COLOR),
+            BorderFactory.createEmptyBorder(8, 10, 8, 10)
+        ));
+        formPanel.add(dueDateSpinner, gbc);
+        
+        gbc.gridy++;
+        gbc.insets = new Insets(5, 0, 10, 0);
+        
+        // Category selection
+        JLabel categoryLabel = new JLabel("Category");
+        categoryLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        formPanel.add(categoryLabel, gbc);
+        
+        gbc.gridy++;
+        gbc.insets = new Insets(0, 0, 15, 0);
+        categoryComboBox = new JComboBox<>();
+        
+        // Add "No Category" option
+        categoryComboBox.addItem(new Category(0, "No Category"));
+        
+        // Load categories
+        loadCategories();
+        
+        categoryComboBox.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        categoryComboBox.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(BORDER_COLOR),
+            BorderFactory.createEmptyBorder(8, 10, 8, 10)
+        ));
+        formPanel.add(categoryComboBox, gbc);
+        
+        // New Category section
+        gbc.gridy++;
+        gbc.insets = new Insets(5, 0, 10, 0);
+        
+        JPanel newCategoryPanel = new JPanel(new BorderLayout(10, 0));
+        newCategoryPanel.setBackground(BACKGROUND_COLOR);
+        
+        JLabel newCategoryLabel = new JLabel("New Category");
+        newCategoryLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        
+        gbc.gridy++;
+        formPanel.add(newCategoryLabel, gbc);
+        
+        gbc.gridy++;
+        
+        newCategoryField = new JTextField();
+        newCategoryField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        newCategoryField.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(BORDER_COLOR),
+            BorderFactory.createEmptyBorder(8, 10, 8, 10)
+        ));
+        
+        JPanel newCategoryFieldPanel = new JPanel(new BorderLayout(5, 0));
+        newCategoryFieldPanel.setBackground(BACKGROUND_COLOR);
+        newCategoryFieldPanel.add(newCategoryField, BorderLayout.CENTER);
+        
+        addCategoryButton = new JButton("Add");
+        addCategoryButton.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        addCategoryButton.setFocusPainted(false);
+        addCategoryButton.setBackground(PRIMARY_COLOR);
+        addCategoryButton.setForeground(Color.WHITE);
+        addCategoryButton.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
+        addCategoryButton.addActionListener(e -> handleAddCategory());
+        newCategoryFieldPanel.add(addCategoryButton, BorderLayout.EAST);
+        
+        formPanel.add(newCategoryFieldPanel, gbc);
+        
+        gbc.gridy++;
+        gbc.insets = new Insets(15, 0, 10, 0);
+        
+        // Description area
+        JLabel descriptionLabel = new JLabel("Description");
+        descriptionLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        formPanel.add(descriptionLabel, gbc);
+        
+        gbc.gridy++;
+        gbc.weighty = 1.0;
+        gbc.fill = GridBagConstraints.BOTH;
+        descriptionField = new JTextArea(8, 20);
+        descriptionField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        descriptionField.setLineWrap(true);
+        descriptionField.setWrapStyleWord(true);
+        
+        JScrollPane descScrollPane = new JScrollPane(descriptionField);
+        descScrollPane.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(BORDER_COLOR),
+            BorderFactory.createEmptyBorder(8, 8, 8, 8)
+        ));
+        formPanel.add(descScrollPane, gbc);
+        
         panel.add(headerPanel, BorderLayout.NORTH);
-        panel.add(scrollPane, BorderLayout.CENTER);
-
+        panel.add(formPanel, BorderLayout.CENTER);
+        
         return panel;
     }
 
@@ -1214,73 +1247,6 @@ public class TaskFrame extends JFrame {
         field.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         field.setForeground(TEXT_COLOR);
         field.putClientProperty("JTextField.placeholderText", "Search tasks...");
-    }
-
-    private void showPanel(String name) {
-        CardLayout cl = (CardLayout) mainContentPanel.getLayout();
-        cl.show(mainContentPanel, name);
-        
-        // Update button states
-        switch (name) {
-            case "TASKS":
-                updateSelectedButton((JButton) navigationPanel.getComponent(0));
-                break;
-            case "POMODORO":
-                updateSelectedButton(pomodoroButton);
-                break;
-            case "DASHBOARD":
-                updateSelectedButton(dashboardButton);
-                updateDashboard(); // Refresh dashboard data
-                break;
-        }
-    }
-
-    // Inner class for circular progress
-    private class CircularProgressPanel extends JPanel {
-        private double progress = 0.0;
-
-        public void setProgress(double progress) {
-            this.progress = progress;
-        }
-
-        @Override
-        protected void paintComponent(Graphics g) {
-            super.paintComponent(g);
-            Graphics2D g2 = (Graphics2D) g;
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-
-            int size = Math.min(getWidth(), getHeight()) - 40;
-            int x = (getWidth() - size) / 2;
-            int y = (getHeight() - size) / 2;
-
-            // Draw background circle
-            g2.setColor(new Color(240, 240, 240));
-            g2.setStroke(new BasicStroke(10));
-            g2.drawArc(x, y, size, size, 0, 360);
-
-            // Draw progress
-            g2.setColor(PRIMARY_COLOR);
-            g2.drawArc(x, y, size, size, 90, -(int) (progress * 360));
-        }
-    }
-
-    private String formatDueDate(Date date) {
-        if (date == null) return "";
-        
-        Calendar today = Calendar.getInstance();
-        Calendar dueDate = Calendar.getInstance();
-        dueDate.setTime(date);
-
-        if (today.get(Calendar.YEAR) == dueDate.get(Calendar.YEAR) &&
-            today.get(Calendar.DAY_OF_YEAR) == dueDate.get(Calendar.DAY_OF_YEAR)) {
-            return "Today";
-        } else if (today.get(Calendar.YEAR) == dueDate.get(Calendar.YEAR) &&
-                   today.get(Calendar.DAY_OF_YEAR) + 1 == dueDate.get(Calendar.DAY_OF_YEAR)) {
-            return "Tomorrow";
-        } else {
-            SimpleDateFormat sdf = new SimpleDateFormat("d MMM");
-            return sdf.format(date);
-        }
     }
 
     private JPanel createDashboardPanel() {
@@ -1585,5 +1551,631 @@ public class TaskFrame extends JFrame {
                 return 16;
             }
         };
+    }
+
+    private JPanel createDetailSection(String title) {
+        JPanel section = new JPanel();
+        section.setLayout(new BoxLayout(section, BoxLayout.Y_AXIS));
+        section.setBackground(BACKGROUND_COLOR);
+        section.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JLabel titleLabel = new JLabel(title);
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        titleLabel.setForeground(new Color(115, 115, 115));
+        titleLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 10, 0));
+        
+        section.add(titleLabel);
+        return section;
+    }
+
+    private void styleTextField(JTextField field) {
+        field.setBackground(BACKGROUND_COLOR);
+        field.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createMatteBorder(0, 0, 1, 0, BORDER_COLOR),
+            BorderFactory.createEmptyBorder(5, 0, 5, 0)
+        ));
+        field.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        field.setForeground(TEXT_COLOR);
+    }
+
+    private void styleTextArea(JTextArea area) {
+        area.setBackground(BACKGROUND_COLOR);
+        area.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(BORDER_COLOR),
+            BorderFactory.createEmptyBorder(10, 10, 10, 10)
+        ));
+        area.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        area.setForeground(TEXT_COLOR);
+        area.setLineWrap(true);
+        area.setWrapStyleWord(true);
+    }
+
+    private void styleButton(JButton button, boolean isPrimary) {
+        button.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        button.setForeground(isPrimary ? Color.WHITE : TEXT_COLOR);
+        button.setBackground(isPrimary ? PRIMARY_COLOR : BACKGROUND_COLOR);
+        button.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(isPrimary ? PRIMARY_COLOR : BORDER_COLOR),
+            BorderFactory.createEmptyBorder(8, 16, 8, 16)
+        ));
+        button.setFocusPainted(false);
+        button.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+        button.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                if (isPrimary) {
+                    button.setBackground(button.getBackground().darker());
+                } else {
+                    button.setBackground(HOVER_COLOR);
+                }
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                button.setBackground(isPrimary ? PRIMARY_COLOR : BACKGROUND_COLOR);
+            }
+        });
+    }
+
+    private void styleComboBox(JComboBox<?> comboBox) {
+        comboBox.setBackground(BACKGROUND_COLOR);
+        comboBox.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        comboBox.setForeground(TEXT_COLOR);
+        comboBox.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(BORDER_COLOR),
+            BorderFactory.createEmptyBorder(5, 10, 5, 10)
+        ));
+        ((JComponent) comboBox.getRenderer()).setBackground(BACKGROUND_COLOR);
+    }
+    
+    private void styleDateSpinner(JSpinner spinner) {
+        spinner.setBackground(BACKGROUND_COLOR);
+        spinner.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(BORDER_COLOR),
+            BorderFactory.createEmptyBorder(5, 10, 5, 10)
+        ));
+        
+        JSpinner.DateEditor editor = new JSpinner.DateEditor(spinner, "MMM d, yyyy");
+        spinner.setEditor(editor);
+        editor.getTextField().setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        editor.getTextField().setForeground(TEXT_COLOR);
+        editor.getTextField().setBackground(BACKGROUND_COLOR);
+    }
+
+    private void loadTasks() {
+        taskListModel.clear();
+        List<Task> tasks = TaskController.getTasks(userId);
+        for (Task task : tasks) {
+            taskListModel.addElement(task);
+        }
+    }
+
+    private JPanel createTaskListPanel() {
+        JPanel panel = new JPanel(new BorderLayout(0, 10));
+        panel.setBackground(SIDEBAR_COLOR);
+        panel.setPreferredSize(new Dimension(300, getHeight()));
+        panel.setBorder(BorderFactory.createMatteBorder(0, 0, 0, 1, BORDER_COLOR));
+        
+        // Header with title, filter, and add button
+        JPanel headerPanel = new JPanel(new BorderLayout(10, 0));
+        headerPanel.setBackground(SIDEBAR_COLOR);
+        headerPanel.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createMatteBorder(0, 0, 1, 0, BORDER_COLOR),
+            BorderFactory.createEmptyBorder(10, 10, 10, 10)
+        ));
+        
+        // Title label on the left
+        JLabel titleLabel = new JLabel("Tasks");
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        titleLabel.setForeground(TEXT_COLOR);
+        
+        // Add button on the right
+        JButton newButton = new JButton("+ New");
+        newButton.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        newButton.setFocusPainted(false);
+        newButton.setBackground(PRIMARY_COLOR);
+        newButton.setForeground(Color.WHITE);
+        newButton.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
+        newButton.addActionListener(e -> {
+            clearFields();
+            addButton.setText("Add Task");
+        });
+        
+        // Panel for title and new button
+        JPanel titleButtonPanel = new JPanel(new BorderLayout(10, 0));
+        titleButtonPanel.setBackground(SIDEBAR_COLOR);
+        titleButtonPanel.add(titleLabel, BorderLayout.WEST);
+        titleButtonPanel.add(newButton, BorderLayout.EAST);
+        
+        headerPanel.add(titleButtonPanel, BorderLayout.NORTH);
+        
+        // Search field below the title
+        JPanel searchPanel = new JPanel(new BorderLayout(5, 0));
+        searchPanel.setBackground(SIDEBAR_COLOR);
+        searchPanel.setBorder(new EmptyBorder(10, 0, 0, 0));
+        
+        JLabel searchLabel = new JLabel("Search:");
+        searchLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        searchPanel.add(searchLabel, BorderLayout.WEST);
+        
+        JTextField searchField = new JTextField();
+        searchField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        styleSearchField(searchField);
+        searchField.getDocument().addDocumentListener(new DocumentListener() {
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                filterTasks(searchField.getText());
+            }
+
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                filterTasks(searchField.getText());
+            }
+
+            @Override
+            public void changedUpdate(DocumentEvent e) {
+                filterTasks(searchField.getText());
+            }
+        });
+        
+        searchPanel.add(searchField, BorderLayout.CENTER);
+        
+        headerPanel.add(searchPanel, BorderLayout.CENTER);
+
+        // Task list with custom renderer
+        taskList.setBackground(SIDEBAR_COLOR);
+        taskList.setBorder(null);
+        taskList.setFixedCellHeight(60);
+        
+        JScrollPane scrollPane = new JScrollPane(taskList);
+        scrollPane.setBorder(null);
+        scrollPane.getViewport().setBackground(SIDEBAR_COLOR);
+
+        panel.add(headerPanel, BorderLayout.NORTH);
+        panel.add(scrollPane, BorderLayout.CENTER);
+
+        return panel;
+    }
+    
+    private void filterTasks(String searchText) {
+        if (searchText.isEmpty()) {
+            loadTasks(); // Reload all tasks
+            return;
+        }
+        
+        searchText = searchText.toLowerCase();
+        DefaultListModel<Task> filteredModel = new DefaultListModel<>();
+        
+        for (int i = 0; i < taskListModel.getSize(); i++) {
+            Task task = taskListModel.getElementAt(i);
+            if (task.getTitle().toLowerCase().contains(searchText) || 
+                (task.getDescription() != null && task.getDescription().toLowerCase().contains(searchText))) {
+                filteredModel.addElement(task);
+            }
+        }
+        
+        taskList.setModel(filteredModel);
+    }
+
+    /**
+     * Displays task details in the form
+     */
+    private void displayTaskDetails(Task task) {
+        titleField.setText(task.getTitle());
+        descriptionField.setText(task.getDescription());
+        statusComboBox.setSelectedItem(task.getStatus());
+        dueDateSpinner.setValue(task.getDueDate() != null ? 
+            task.getDueDate() : new Date());
+        
+        // Set the selected category
+        if (task.getCategory() != null) {
+            for (int i = 0; i < categoryComboBox.getItemCount(); i++) {
+                Category category = categoryComboBox.getItemAt(i);
+                if (category.getId() == task.getCategory().getId()) {
+                    categoryComboBox.setSelectedIndex(i);
+                    break;
+                }
+            }
+        } else {
+            categoryComboBox.setSelectedIndex(0); // "No Category"
+        }
+    }
+    
+    /**
+     * Creates the calendar panel for viewing tasks by date
+     */
+    private JPanel createCalendarPanel() {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setBackground(BACKGROUND_COLOR);
+        panel.setBorder(new EmptyBorder(20, 20, 20, 20));
+        
+        // Create header
+        JPanel headerPanel = new JPanel(new BorderLayout());
+        headerPanel.setBackground(BACKGROUND_COLOR);
+        headerPanel.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, BORDER_COLOR));
+        
+        // Month navigation
+        JPanel monthNavPanel = new JPanel(new BorderLayout());
+        monthNavPanel.setBackground(BACKGROUND_COLOR);
+        
+        JButton prevButton = new JButton("◀");
+        prevButton.setFocusPainted(false);
+        prevButton.setBorderPainted(false);
+        prevButton.setContentAreaFilled(false);
+        prevButton.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        prevButton.setForeground(PRIMARY_COLOR);
+        
+        JButton nextButton = new JButton("▶");
+        nextButton.setFocusPainted(false);
+        nextButton.setBorderPainted(false);
+        nextButton.setContentAreaFilled(false);
+        nextButton.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        nextButton.setForeground(PRIMARY_COLOR);
+        
+        // Current month label
+        currentCalendar = Calendar.getInstance();
+        monthLabel = new JLabel(monthFormat.format(currentCalendar.getTime()), JLabel.CENTER);
+        monthLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        
+        // Add buttons to navigate between months
+        prevButton.addActionListener(e -> {
+            currentCalendar.add(Calendar.MONTH, -1);
+            updateCalendar();
+        });
+        
+        nextButton.addActionListener(e -> {
+            currentCalendar.add(Calendar.MONTH, 1);
+            updateCalendar();
+        });
+        
+        monthNavPanel.add(prevButton, BorderLayout.WEST);
+        monthNavPanel.add(monthLabel, BorderLayout.CENTER);
+        monthNavPanel.add(nextButton, BorderLayout.EAST);
+        
+        headerPanel.add(monthNavPanel, BorderLayout.NORTH);
+        
+        // Days of week header
+        JPanel daysHeader = new JPanel(new GridLayout(1, 7));
+        daysHeader.setBackground(BACKGROUND_COLOR);
+        
+        String[] daysOfWeek = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
+        for (String day : daysOfWeek) {
+            JLabel dayLabel = new JLabel(day, JLabel.CENTER);
+            dayLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
+            daysHeader.add(dayLabel);
+        }
+        
+        headerPanel.add(daysHeader, BorderLayout.SOUTH);
+        panel.add(headerPanel, BorderLayout.NORTH);
+        
+        // Calendar grid
+        JPanel calendarGrid = new JPanel(new GridLayout(6, 7));
+        calendarGrid.setBackground(BACKGROUND_COLOR);
+        
+        // Fill the calendar grid with day cells
+        for (int i = 0; i < 42; i++) {
+            JPanel dayCell = new JPanel(new BorderLayout());
+            dayCell.setBorder(BorderFactory.createLineBorder(BORDER_COLOR));
+            dayCell.setBackground(CARD_COLOR);
+            
+            JLabel dateLabel = new JLabel("", JLabel.RIGHT);
+            dateLabel.setBorder(new EmptyBorder(5, 5, 5, 5));
+            dateLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+            
+            JPanel tasksPanel = new JPanel();
+            tasksPanel.setLayout(new BoxLayout(tasksPanel, BoxLayout.Y_AXIS));
+            tasksPanel.setBackground(CARD_COLOR);
+            
+            dayCell.add(dateLabel, BorderLayout.NORTH);
+            dayCell.add(tasksPanel, BorderLayout.CENTER);
+            
+            calendarGrid.add(dayCell);
+        }
+        
+        panel.add(calendarGrid, BorderLayout.CENTER);
+        
+        // Save panel reference first, then initialize calendar
+        // Don't call updateCalendar here to avoid the circular dependency
+        
+        return panel;
+    }
+    
+    /**
+     * Updates the calendar display with the current month
+     */
+    private void updateCalendar() {
+        monthLabel.setText(monthFormat.format(currentCalendar.getTime()));
+        
+        // Get tasks for the month
+        Calendar cal = (Calendar) currentCalendar.clone();
+        cal.set(Calendar.DAY_OF_MONTH, 1);
+        
+        // Determine first day of month and adjust for week display
+        int firstDayOfMonth = cal.get(Calendar.DAY_OF_WEEK) - 1;
+        
+        // Reset calendar grid - get it directly from calendarPanel instead of using hardcoded index
+        JPanel calendarGrid = (JPanel) calendarPanel.getComponent(1);
+        
+        // Clear all cells
+        for (Component comp : calendarGrid.getComponents()) {
+            JPanel dayCell = (JPanel) comp;
+            JLabel dateLabel = (JLabel) dayCell.getComponent(0);
+            JPanel tasksPanel = (JPanel) dayCell.getComponent(1);
+            
+            dateLabel.setText("");
+            tasksPanel.removeAll();
+            dayCell.setBackground(CARD_COLOR);
+        }
+        
+        // Get days in month
+        int daysInMonth = cal.getActualMaximum(Calendar.DAY_OF_MONTH);
+        
+        // Get today's date for highlighting
+        Calendar today = Calendar.getInstance();
+        
+        // Fill calendar with dates
+        for (int i = 0; i < daysInMonth; i++) {
+            JPanel dayCell = (JPanel) calendarGrid.getComponent(firstDayOfMonth + i);
+            JLabel dateLabel = (JLabel) dayCell.getComponent(0);
+            JPanel tasksPanel = (JPanel) dayCell.getComponent(1);
+            
+            int day = i + 1;
+            dateLabel.setText(String.valueOf(day));
+            
+            // Highlight current day
+            if (today.get(Calendar.YEAR) == currentCalendar.get(Calendar.YEAR) &&
+                today.get(Calendar.MONTH) == currentCalendar.get(Calendar.MONTH) &&
+                today.get(Calendar.DAY_OF_MONTH) == day) {
+                dateLabel.setForeground(PRIMARY_COLOR);
+                dateLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
+                dayCell.setBackground(new Color(240, 247, 255));
+            }
+            
+            // Add tasks due on this day
+            for (int j = 0; j < taskListModel.getSize(); j++) {
+                Task task = taskListModel.getElementAt(j);
+                if (task.getDueDate() != null) {
+                    Calendar taskDate = Calendar.getInstance();
+                    taskDate.setTime(task.getDueDate());
+                    
+                    if (taskDate.get(Calendar.YEAR) == currentCalendar.get(Calendar.YEAR) &&
+                        taskDate.get(Calendar.MONTH) == currentCalendar.get(Calendar.MONTH) &&
+                        taskDate.get(Calendar.DAY_OF_MONTH) == day) {
+                        
+                        JLabel taskLabel = new JLabel(task.getTitle());
+                        taskLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+                        taskLabel.setBorder(new EmptyBorder(2, 5, 2, 5));
+                        
+                        if ("Completed".equals(task.getStatus())) {
+                            taskLabel.setForeground(COMPLETED_COLOR);
+                        } else if ("In Progress".equals(task.getStatus())) {
+                            taskLabel.setForeground(PRIMARY_COLOR);
+                        } else {
+                            taskLabel.setForeground(PENDING_COLOR);
+                        }
+                        
+                        tasksPanel.add(taskLabel);
+                    }
+                }
+            }
+            
+            tasksPanel.revalidate();
+            tasksPanel.repaint();
+        }
+    }
+
+    /**
+     * Switches the main panel to show the requested view
+     */
+    private void showPanel(String name) {
+        CardLayout cl = (CardLayout) mainContentPanel.getLayout();
+        cl.show(mainContentPanel, name);
+        
+        // Update button states
+        switch (name) {
+            case "TASKS":
+                // Find the Tasks button in navigation panel
+                for (Component c : navigationPanel.getComponents()) {
+                    if (c instanceof JButton && ((JButton)c).getText().contains("Tasks")) {
+                        updateSelectedButton((JButton)c);
+                        break;
+                    }
+                }
+                break;
+            case "POMODORO":
+                if (pomodoroButton != null) {
+                    updateSelectedButton(pomodoroButton);
+                }
+                break;
+            case "DASHBOARD":
+                if (dashboardButton != null) {
+                    updateSelectedButton(dashboardButton);
+                    updateDashboard(); // Refresh dashboard data
+                }
+                break;
+            case "CALENDAR":
+                if (calendarButton != null) {
+                    updateSelectedButton(calendarButton);
+                }
+                // Only update calendar if it's not null
+                if (calendarPanel != null) {
+                    updateCalendar(); // Refresh calendar data
+                }
+                break;
+            case "NOTES":
+                // Handle notes view if we have one
+                JButton notesButton = null;
+                // Try to find the notes button in the navigation panel
+                for (Component c : navigationPanel.getComponents()) {
+                    if (c instanceof JButton && ((JButton)c).getText().contains("Notes")) {
+                        notesButton = (JButton)c;
+                        break;
+                    }
+                }
+                if (notesButton != null) {
+                    updateSelectedButton(notesButton);
+                }
+                break;
+        }
+    }
+
+    /**
+     * Formats a date into a human-readable format for displaying due dates
+     */
+    private String formatDueDate(Date date) {
+        if (date == null) return "";
+        
+        Calendar today = Calendar.getInstance();
+        Calendar dueDate = Calendar.getInstance();
+        dueDate.setTime(date);
+
+        if (today.get(Calendar.YEAR) == dueDate.get(Calendar.YEAR) &&
+            today.get(Calendar.DAY_OF_YEAR) == dueDate.get(Calendar.DAY_OF_YEAR)) {
+            return "Today";
+        } else if (today.get(Calendar.YEAR) == dueDate.get(Calendar.YEAR) &&
+                   today.get(Calendar.DAY_OF_YEAR) + 1 == dueDate.get(Calendar.DAY_OF_YEAR)) {
+            return "Tomorrow";
+        } else {
+            SimpleDateFormat sdf = new SimpleDateFormat("d MMM");
+            return sdf.format(date);
+        }
+    }
+    
+    /**
+     * Clears all form fields to create a new task
+     */
+    private void clearFields() {
+        titleField.setText("");
+        descriptionField.setText("");
+        statusComboBox.setSelectedIndex(0);
+        dueDateSpinner.setValue(new Date());
+        categoryComboBox.setSelectedIndex(0);
+        newCategoryField.setText("");
+        taskList.clearSelection();
+    }
+    
+    /**
+     * Loads all categories from the database into the combo box
+     */
+    private void loadCategories() {
+        categoryComboBox.removeAllItems();
+        
+        // Add a "No Category" option
+        categoryComboBox.addItem(new Category(0, "No Category"));
+        
+        // Load all categories from the database
+        List<Category> categories = CategoryController.getAllCategories();
+        for (Category category : categories) {
+            categoryComboBox.addItem(category);
+        }
+    }
+    
+    /**
+     * Handles adding a new category
+     */
+    private void handleAddCategory() {
+        String categoryName = newCategoryField.getText().trim();
+        if (!categoryName.isEmpty()) {
+            Category newCategory = CategoryController.createCategory(categoryName);
+            if (newCategory != null) {
+                loadCategories(); // Reload the categories
+                categoryComboBox.setSelectedItem(newCategory); // Select the new category
+                newCategoryField.setText(""); // Clear the field
+            }
+        }
+    }
+    
+    /**
+     * Handles updating an existing task
+     */
+    private void handleUpdateTask() {
+        Task selectedTask = taskList.getSelectedValue();
+        if (selectedTask == null) {
+            JOptionPane.showMessageDialog(this, "No task selected!", "Warning", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        String title = titleField.getText().trim();
+        String description = descriptionField.getText().trim();
+        String status = (String) statusComboBox.getSelectedItem();
+        Date dueDate = (Date) dueDateSpinner.getValue();
+        Category selectedCategory = (Category) categoryComboBox.getSelectedItem();
+
+        if (title.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Title cannot be empty!", "Invalid Input", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        boolean success;
+        if (selectedCategory != null && selectedCategory.getId() != 0) {
+            success = TaskController.updateTask(selectedTask.getTaskId(), title, description, status, dueDate, selectedCategory);
+        } else {
+            success = TaskController.updateTask(selectedTask.getTaskId(), title, description, status, dueDate);
+        }
+        
+        if (success) {
+            loadTasks();
+            updateDashboard();
+        } else {
+            JOptionPane.showMessageDialog(this, "Failed to update task!", "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+    
+    /**
+     * Handles deleting a task
+     */
+    private void handleDeleteTask() {
+        Task selectedTask = taskList.getSelectedValue();
+        if (selectedTask == null) return;
+
+        int confirm = JOptionPane.showConfirmDialog(this,
+            "Are you sure you want to delete this task?",
+            "Confirm Delete",
+            JOptionPane.YES_NO_OPTION);
+
+        if (confirm == JOptionPane.YES_OPTION) {
+            if (TaskController.deleteTask(selectedTask.getTaskId())) {
+                loadTasks();
+                clearFields();
+                updateDashboard();
+            } else {
+                JOptionPane.showMessageDialog(this,
+                    "Failed to delete task",
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+
+    /**
+     * Handles adding a new task
+     */
+    private void handleAddTask() {
+        String title = titleField.getText().trim();
+        String description = descriptionField.getText().trim();
+        String status = (String) statusComboBox.getSelectedItem();
+        Date dueDate = (Date) dueDateSpinner.getValue();
+        Category selectedCategory = (Category) categoryComboBox.getSelectedItem();
+        
+        if (title.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Title cannot be empty!", "Invalid Input", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        
+        boolean success;
+        if (selectedCategory != null && selectedCategory.getId() != 0) {
+            success = TaskController.createTask(userId, title, description, status, dueDate, selectedCategory);
+        } else {
+            success = TaskController.createTask(userId, title, description, status, dueDate);
+        }
+        
+        if (success) {
+            loadTasks();
+            clearFields();
+            updateDashboard();
+        } else {
+            JOptionPane.showMessageDialog(this, "Failed to add task!", "Error", JOptionPane.ERROR_MESSAGE);
+        }
     }
 }

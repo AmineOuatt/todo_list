@@ -1,10 +1,12 @@
 package Controller;
 
+import java.util.Date;
+import java.util.List;
+import java.util.stream.Collectors;
+
+import Model.Category;
 import Model.Task;
 import Model.TaskDAO;
-import java.util.List;
-import java.util.Date;
-import java.util.stream.Collectors;
 
 public class TaskController {
 
@@ -31,6 +33,12 @@ public class TaskController {
         Task task = new Task(0, userId, title, description, date, status);
         return TaskDAO.insertTask(task);
     }
+    
+    // Create a new task with category
+    public static boolean createTask(int userId, String title, String description, String status, Date date, Category category) {
+        Task task = new Task(0, userId, title, description, date, status, category);
+        return TaskDAO.insertTask(task);
+    }
 
     // Update task
     public static boolean updateTask(int taskId, String title, String description, String status, Date date) {
@@ -41,6 +49,20 @@ public class TaskController {
         task.setDescription(description);
         task.setStatus(status);
         task.setDate(date);
+        
+        return TaskDAO.updateTask(task);
+    }
+    
+    // Update task with category
+    public static boolean updateTask(int taskId, String title, String description, String status, Date date, Category category) {
+        Task task = TaskDAO.getTaskById(taskId);
+        if (task == null) return false;
+        
+        task.setTitle(title);
+        task.setDescription(description);
+        task.setStatus(status);
+        task.setDate(date);
+        task.setCategory(category);
         
         return TaskDAO.updateTask(task);
     }
@@ -58,5 +80,15 @@ public class TaskController {
     // Get task by ID
     public static Task getTaskById(int taskId) {
         return TaskDAO.getTaskById(taskId);
+    }
+    
+    // Get tasks by category
+    public static List<Task> getTasksByCategory(int userId, int categoryId) {
+        return TaskDAO.getTasksByCategory(userId, categoryId);
+    }
+    
+    // Update task category
+    public static boolean updateTaskCategory(int taskId, Integer categoryId) {
+        return TaskDAO.updateTaskCategory(taskId, categoryId);
     }
 }

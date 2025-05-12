@@ -1,12 +1,36 @@
 package View;
 
-import javax.swing.*;
+import java.awt.BasicStroke;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Cursor;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
+import java.awt.Toolkit;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.JButton;
+import javax.swing.JComponent;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JSpinner;
+import javax.swing.JTextField;
+import javax.swing.SpinnerNumberModel;
+import javax.swing.Timer;
 import javax.swing.border.EmptyBorder;
-import javax.swing.plaf.basic.BasicButtonUI;
-import javax.swing.plaf.basic.BasicGraphicsUtils;
-import java.awt.*;
-import java.awt.event.*;
-import java.awt.geom.*;
 
 public class PomodoroView extends JFrame {
     private TaskFrame parentFrame;
@@ -36,6 +60,9 @@ public class PomodoroView extends JFrame {
         setSize(400, 600);
         setLocationRelativeTo(null);
         setBackground(BACKGROUND_COLOR);
+        
+        // Set to fullscreen mode
+        setExtendedState(JFrame.MAXIMIZED_BOTH);
 
         // Create main container
         JPanel mainContainer = new JPanel();

@@ -9,6 +9,7 @@ public class Task {
     private String description;
     private Date dueDate;
     private String status;
+    private Category category;
 
     public Task(int taskId, int userId, String title, String description, Date dueDate, String status) {
         this.taskId = taskId;
@@ -17,6 +18,17 @@ public class Task {
         this.description = description;
         this.dueDate = dueDate;
         this.status = status;
+        this.category = null;
+    }
+
+    public Task(int taskId, int userId, String title, String description, Date dueDate, String status, Category category) {
+        this.taskId = taskId;
+        this.userId = userId;
+        this.title = title;
+        this.description = description;
+        this.dueDate = dueDate;
+        this.status = status;
+        this.category = category;
     }
 
     public int getTaskId() {
@@ -65,5 +77,17 @@ public class Task {
 
     public void setDate(Date date) {
         setDueDate(date);
+    }
+    
+    public Category getCategory() {
+        return category;
+    }
+    
+    public void setCategory(Category category) {
+        this.category = category;
+    }
+    
+    public int getCategoryId() {
+        return category != null ? category.getId() : 0;
     }
 }
