@@ -173,55 +173,109 @@ public class TaskFrame extends JFrame {
 
     // Custom cell renderer for tasks
     private class TaskListCellRenderer extends DefaultListCellRenderer {
+        private SimpleDateFormat dateFormat = new SimpleDateFormat("MMM d, yyyy");
+        
         @Override
         public Component getListCellRendererComponent(
                 JList<?> list, Object value, int index,
                 boolean isSelected, boolean cellHasFocus) {
             
-            super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
-            
             if (value instanceof Task) {
                 Task task = (Task) value;
-                String title = task.getTitle();
-                String status = task.getStatus();
-                String categoryText = "";
                 
-                // Add category information if available
-                if (task.getCategory() != null) {
-                    categoryText = " [" + task.getCategory().getName() + "]";
-                }
-                
-                setText(title + categoryText);
-                
-                // Set icon based on status
-                if ("Completed".equals(status)) {
-                    setIcon(UIManager.getIcon("CheckBox.icon"));
-                    setFont(getFont().deriveFont(Font.PLAIN));
-                } else {
-                    setIcon(UIManager.getIcon("Tree.leafIcon"));
-                    setFont(getFont().deriveFont(Font.BOLD));
-                }
+                JPanel panel = new JPanel();
+                panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+                panel.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createMatteBorder(0, 0, 1, 0, BORDER_COLOR),
+                    BorderFactory.createEmptyBorder(15, 10, 15, 10)
+                ));
                 
                 if (isSelected) {
-                    setBackground(HOVER_COLOR);
-                    setForeground(PRIMARY_COLOR);
+                    panel.setBackground(HOVER_COLOR);
                 } else {
-                    setBackground(Color.WHITE);
-                    
-                    if ("Completed".equals(status)) {
-                        setForeground(Color.GRAY);
-                    } else {
-                        setForeground(TEXT_COLOR);
-                    }
+                    panel.setBackground(SIDEBAR_COLOR);
                 }
                 
-                setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createMatteBorder(0, 0, 1, 0, BORDER_COLOR),
-                    BorderFactory.createEmptyBorder(10, 10, 10, 10)
-                ));
+                // Title
+                JLabel titleLabel = new JLabel(task.getTitle());
+                titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
+                if (isSelected) {
+                    titleLabel.setForeground(PRIMARY_COLOR);
+                } else if ("Completed".equals(task.getStatus())) {
+                    titleLabel.setForeground(Color.GRAY);
+                    titleLabel.setFont(titleLabel.getFont().deriveFont(Font.PLAIN));
+                } else {
+                    titleLabel.setForeground(TEXT_COLOR);
+                }
+                titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+                panel.add(titleLabel);
+                
+                // Add some space
+                panel.add(Box.createVerticalStrut(5));
+                
+                // Preview of description (first 50 chars)
+                String preview = task.getDescription();
+                if (preview != null) {
+                    if (preview.length() > 50) {
+                        preview = preview.substring(0, 47) + "...";
+                    }
+                    JLabel previewLabel = new JLabel(preview);
+                    previewLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+                    previewLabel.setForeground(new Color(100, 100, 100));
+                    previewLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+                    panel.add(previewLabel);
+                }
+                
+                // Add some space
+                panel.add(Box.createVerticalStrut(5));
+                
+                // Category, status and date
+                JPanel metaPanel = new JPanel(new BorderLayout());
+                metaPanel.setBackground(panel.getBackground());
+                
+                JPanel leftMeta = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
+                leftMeta.setBackground(panel.getBackground());
+                
+                // Status indicator
+                JLabel statusLabel = new JLabel(task.getStatus());
+                statusLabel.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+                Color statusColor = TEXT_COLOR;
+                if ("Completed".equals(task.getStatus())) {
+                    statusColor = COMPLETED_COLOR;
+                } else if ("In Progress".equals(task.getStatus())) {
+                    statusColor = PRIMARY_COLOR;
+                } else if ("Pending".equals(task.getStatus())) {
+                    statusColor = PENDING_COLOR;
+                }
+                statusLabel.setForeground(statusColor);
+                leftMeta.add(statusLabel);
+                
+                // Category if available
+                if (task.getCategory() != null) {
+                    JLabel categoryLabel = new JLabel("• " + task.getCategory().getName());
+                    categoryLabel.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+                    categoryLabel.setForeground(PRIMARY_COLOR);
+                    leftMeta.add(categoryLabel);
+                }
+                
+                metaPanel.add(leftMeta, BorderLayout.WEST);
+                
+                // Date
+                if (task.getDueDate() != null) {
+                    String dateText = dateFormat.format(task.getDueDate());
+                    JLabel dateLabel = new JLabel(dateText);
+                    dateLabel.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+                    dateLabel.setForeground(new Color(150, 150, 150));
+                    metaPanel.add(dateLabel, BorderLayout.EAST);
+                }
+                
+                metaPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+                panel.add(metaPanel);
+                
+                return panel;
             }
             
-            return this;
+            return super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
         }
     }
 
@@ -1759,7 +1813,7 @@ public class TaskFrame extends JFrame {
         // Task list with custom renderer
         taskList.setBackground(SIDEBAR_COLOR);
         taskList.setBorder(null);
-        taskList.setFixedCellHeight(60);
+        taskList.setFixedCellHeight(90);
         
         JScrollPane scrollPane = new JScrollPane(taskList);
         scrollPane.setBorder(null);
