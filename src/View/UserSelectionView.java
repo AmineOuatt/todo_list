@@ -1,12 +1,39 @@
 package View;
 
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Cursor;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.FontMetrics;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.GridBagLayout;
+import java.awt.GridLayout;
+import java.awt.RenderingHints;
+import java.awt.Toolkit;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import java.util.List;
+
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.JButton;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.SwingConstants;
+import javax.swing.SwingUtilities;
+import javax.swing.UIManager;
+import javax.swing.border.EmptyBorder;
+
 import Controller.UserController;
 import Model.User;
-import java.awt.*;
-import java.awt.event.*;
-import java.util.List;
-import javax.swing.*;
-import javax.swing.border.EmptyBorder;
 
 public class UserSelectionView extends JFrame {
     // Modern Microsoft style colors
@@ -42,14 +69,21 @@ public class UserSelectionView extends JFrame {
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setBackground(BACKGROUND_COLOR);
         
+        // Set to fullscreen mode
+        setExtendedState(JFrame.MAXIMIZED_BOTH);
+        // Remove window decorations for true fullscreen
+        setUndecorated(true);
+        
         // Main container
         JPanel mainPanel = new JPanel(new BorderLayout());
         mainPanel.setBackground(BACKGROUND_COLOR);
         
-        // Center panel
+        // Center panel - limit width for better appearance on large screens
         JPanel centerPanel = new JPanel();
         centerPanel.setLayout(new BoxLayout(centerPanel, BoxLayout.Y_AXIS));
         centerPanel.setBackground(CARD_COLOR);
+        centerPanel.setMaximumSize(new Dimension(1200, Integer.MAX_VALUE));
+        centerPanel.setAlignmentX(Component.CENTER_ALIGNMENT);
         centerPanel.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(new Color(225, 225, 225)),
             new EmptyBorder(STANDARD_PADDING, STANDARD_PADDING, 
@@ -58,11 +92,11 @@ public class UserSelectionView extends JFrame {
 
         // Logo
         JLabel logoLabel = new JLabel("✓", SwingConstants.CENTER);
-        logoLabel.setFont(new Font("Segoe UI", Font.BOLD, 48));
+        logoLabel.setFont(new Font("Segoe UI", Font.BOLD, 64)); // Larger logo for fullscreen
         logoLabel.setForeground(ACCENT_COLOR);
         logoLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         centerPanel.add(logoLabel);
-        centerPanel.add(Box.createVerticalStrut(STANDARD_PADDING));
+        centerPanel.add(Box.createVerticalStrut(STANDARD_PADDING * 2));
 
         // Title
         JLabel titleLabel = new JLabel("Choose Your Profile", SwingConstants.CENTER);
@@ -78,21 +112,57 @@ public class UserSelectionView extends JFrame {
         subtitleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         centerPanel.add(Box.createVerticalStrut(5));
         centerPanel.add(subtitleLabel);
-        centerPanel.add(Box.createVerticalStrut(STANDARD_PADDING));
+        centerPanel.add(Box.createVerticalStrut(STANDARD_PADDING * 2));
 
-        // Users Grid - fixed 3 columns
-        usersGrid = new JPanel(new GridLayout(0, 3, GRID_GAPS, GRID_GAPS));
+        // Users Grid panel with fixed width and auto rows
+        // Calculate number of columns based on screen size - min 3, max 6
+        Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+        int columns = Math.max(3, Math.min(6, screenSize.width / 300));
+        
+        usersGrid = new JPanel(new GridLayout(0, columns, GRID_GAPS, GRID_GAPS));
         usersGrid.setBackground(CARD_COLOR);
-        centerPanel.add(usersGrid);
+        
+        // Wrap grid in a panel with fixed width to ensure proper centering
+        JPanel gridWrapper = new JPanel();
+        gridWrapper.setLayout(new BoxLayout(gridWrapper, BoxLayout.Y_AXIS));
+        gridWrapper.setBackground(CARD_COLOR);
+        gridWrapper.setAlignmentX(Component.CENTER_ALIGNMENT);
+        
+        // Add the grid to the wrapper with some padding
+        JPanel paddedGrid = new JPanel();
+        paddedGrid.setLayout(new FlowLayout(FlowLayout.CENTER));
+        paddedGrid.setBackground(CARD_COLOR);
+        paddedGrid.add(usersGrid);
+        
+        gridWrapper.add(paddedGrid);
+        centerPanel.add(gridWrapper);
+        
+        // Add exit button at the bottom
+        JButton exitButton = new JButton("Exit");
+        exitButton.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        exitButton.setForeground(new Color(220, 53, 69)); // Red color
+        exitButton.setBackground(Color.WHITE);
+        exitButton.setBorderPainted(false);
+        exitButton.setFocusPainted(false);
+        exitButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        exitButton.addActionListener(e -> System.exit(0));
+        exitButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+        
+        centerPanel.add(Box.createVerticalStrut(STANDARD_PADDING * 2));
+        centerPanel.add(exitButton);
 
-        // Add the center panel to main panel
-        mainPanel.add(centerPanel, BorderLayout.CENTER);
+        // Wrap center panel in a container to center it horizontally
+        JPanel centerContainer = new JPanel(new GridBagLayout());
+        centerContainer.setBackground(BACKGROUND_COLOR);
+        centerContainer.add(centerPanel);
+
+        // Add the center container to main panel
+        mainPanel.add(centerContainer, BorderLayout.CENTER);
         add(mainPanel);
-
-        // Set window size
-        setPreferredSize(new Dimension(800, 600));
+        
+        // Remove size constraints - fill the screen
+        setPreferredSize(Toolkit.getDefaultToolkit().getScreenSize());
         pack();
-        setLocationRelativeTo(null);
     }
 
     private void loadUsers() {
@@ -105,47 +175,11 @@ public class UserSelectionView extends JFrame {
                 user.getUsername(),
                 false
             );
-            userCard.addMouseListener(new MouseAdapter() {
-                @Override
-                public void mouseClicked(MouseEvent e) {
-                    if (e.getButton() == MouseEvent.BUTTON1) {
-                        // Left click - Login
-                        if (listener != null) {
-                            listener.onUserSelected(user.getUsername());
-                        }
-                        dispose();
-                    } else if (e.getButton() == MouseEvent.BUTTON3) {
-                        // Right click - Manage Profile
-                        // Show password verification dialog
-                        JPasswordField passwordField = new JPasswordField();
-                        int result = JOptionPane.showConfirmDialog(UserSelectionView.this,
-                            passwordField,
-                            "Enter password to manage profile",
-                            JOptionPane.OK_CANCEL_OPTION,
-                            JOptionPane.PLAIN_MESSAGE);
-
-                        if (result == JOptionPane.OK_OPTION) {
-                            String password = new String(passwordField.getPassword());
-                            // Verify password
-                            if (UserController.authenticateUser(user.getUsername(), password)) {
-                                // Open user management view
-                                UserManagementView managementView = new UserManagementView(user);
-                                managementView.addWindowListener(new WindowAdapter() {
-                                    @Override
-                                    public void windowClosed(WindowEvent e) {
-                                        refreshUsers();
-                                    }
-                                });
-                                managementView.setVisible(true);
-                            } else {
-                                JOptionPane.showMessageDialog(UserSelectionView.this,
-                                    "Incorrect password",
-                                    "Error",
-                                    JOptionPane.ERROR_MESSAGE);
-                            }
-                        }
-                    }
-                }
+            userCard.addActionListener(e -> {
+                // When a user card is clicked, open the LoginView with the selected username
+                LoginView loginView = new LoginView(user.getUsername());
+                loginView.setVisible(true);
+                dispose(); // Close this window
             });
             usersGrid.add(userCard);
         }
@@ -173,6 +207,11 @@ public class UserSelectionView extends JFrame {
     }
 
     private JButton createProfileCard(String initial, String name, boolean isAddButton) {
+        // Calculate better card size based on screen dimensions
+        Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+        int dynamicCardWidth = Math.min(CARD_WIDTH * 2, screenSize.width / 8);
+        int dynamicCardHeight = Math.min(CARD_HEIGHT * 2, screenSize.height / 5);
+        
         JButton card = new JButton() {
             @Override
             protected void paintComponent(Graphics g) {
@@ -184,16 +223,17 @@ public class UserSelectionView extends JFrame {
                 g2.fillRoundRect(0, 0, getWidth(), getHeight(), 20, 20);
 
                 // Draw avatar circle
-                int circleDiameter = Math.min(getWidth(), getHeight()) - 40;
+                int circleDiameter = Math.min(getWidth(), getHeight()) - 60;
                 int x = (getWidth() - circleDiameter) / 2;
-                int y = (getHeight() - circleDiameter) / 2 - 15;
+                int y = (getHeight() - circleDiameter) / 2 - 20;
                 
                 g2.setColor(isAddButton ? ACCENT_COLOR : getRandomColor(name));
                 g2.fillOval(x, y, circleDiameter, circleDiameter);
 
                 // Draw initial/plus
                 g2.setColor(Color.WHITE);
-                g2.setFont(new Font("Segoe UI", Font.BOLD, isAddButton ? 36 : 28));
+                int fontSize = isAddButton ? 46 : 36;
+                g2.setFont(new Font("Segoe UI", Font.BOLD, fontSize));
                 FontMetrics fm = g2.getFontMetrics();
                 int textX = (getWidth() - fm.stringWidth(initial)) / 2;
                 int textY = y + (circleDiameter + fm.getAscent() - fm.getDescent()) / 2;
@@ -201,15 +241,29 @@ public class UserSelectionView extends JFrame {
 
                 // Draw name
                 g2.setColor(TEXT_COLOR);
-                g2.setFont(BODY_FONT);
+                g2.setFont(new Font("Segoe UI", Font.BOLD, 16)); // Larger font for name
                 fm = g2.getFontMetrics();
                 textX = (getWidth() - fm.stringWidth(name)) / 2;
-                textY = getHeight() - 20;
+                textY = getHeight() - 30;
                 g2.drawString(name, textX, textY);
+            }
+            
+            @Override
+            public Dimension getMinimumSize() {
+                return new Dimension(dynamicCardWidth, dynamicCardHeight);
+            }
+            
+            @Override
+            public Dimension getPreferredSize() {
+                return new Dimension(dynamicCardWidth, dynamicCardHeight);
+            }
+            
+            @Override
+            public Dimension getMaximumSize() {
+                return getPreferredSize();
             }
         };
 
-        card.setPreferredSize(new Dimension(CARD_WIDTH, CARD_HEIGHT));
         card.setBackground(CARD_COLOR);
         card.setBorderPainted(false);
         card.setFocusPainted(false);

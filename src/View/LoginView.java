@@ -1,11 +1,31 @@
 package View;
 
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Cursor;
+import java.awt.Dimension;
+import java.awt.Font;
+import java.util.List;
+
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.DefaultComboBoxModel;
+import javax.swing.JButton;
+import javax.swing.JComboBox;
+import javax.swing.JComponent;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JPasswordField;
+import javax.swing.JTextField;
+import javax.swing.SwingConstants;
+import javax.swing.border.EmptyBorder;
+
 import Controller.UserController;
 import Model.User;
-import java.awt.*;
-import java.util.List;
-import javax.swing.*;
-import javax.swing.border.EmptyBorder;
 
 public class LoginView extends JFrame {
     private JComboBox<User> userDropdown;
@@ -24,11 +44,18 @@ public class LoginView extends JFrame {
 
     public LoginView(String selectedUsername) {
         setTitle("To-Do List");
-        setSize(400, 600);
+        setSize(800, 600);  // Wider size for horizontal layout
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
         getContentPane().setBackground(BACKGROUND_COLOR);
 
+        // Set to fullscreen mode
+        setExtendedState(JFrame.MAXIMIZED_BOTH);
+
+        // Main container using BorderLayout for better horizontal layout
+        JPanel container = new JPanel(new BorderLayout());
+        container.setBackground(BACKGROUND_COLOR);
+        
         // Main panel
         JPanel mainPanel = new JPanel();
         mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.Y_AXIS));
@@ -65,6 +92,7 @@ public class LoginView extends JFrame {
             BorderFactory.createLineBorder(BORDER_COLOR),
             new EmptyBorder(20, 20, 20, 20)
         ));
+        loginPanel.setMaximumSize(new Dimension(400, Integer.MAX_VALUE)); // Limit width for better appearance
 
         // User Selection
         JLabel userLabel = new JLabel("Select User");
@@ -164,7 +192,11 @@ public class LoginView extends JFrame {
             manageButton.setEnabled(selectedUser != null);
         });
 
-        add(mainPanel);
+        // Add the mainPanel to the center of the container
+        container.add(mainPanel, BorderLayout.CENTER);
+        
+        // Add the container to the frame
+        add(container);
     }
 
     private JPanel createUserPanel() {

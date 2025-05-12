@@ -1,11 +1,29 @@
 package View;
 
-import Controller.UserController;
-import java.awt.*;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Cursor;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.Font;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import javax.swing.*;
+
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.JButton;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JPasswordField;
+import javax.swing.JTextField;
+import javax.swing.SwingConstants;
 import javax.swing.border.EmptyBorder;
+
+import Controller.UserController;
 
 public class CreateUserView extends JFrame {
     private JTextField usernameField;
@@ -22,10 +40,17 @@ public class CreateUserView extends JFrame {
 
     public CreateUserView() {
         setTitle("Create Account");
-        setSize(400, 600);
+        setSize(800, 600);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setLocationRelativeTo(null);
         getContentPane().setBackground(BACKGROUND_COLOR);
+        
+        // Set to fullscreen mode
+        setExtendedState(JFrame.MAXIMIZED_BOTH);
+
+        // Main container with BorderLayout for better horizontal layout
+        JPanel container = new JPanel(new BorderLayout());
+        container.setBackground(BACKGROUND_COLOR);
 
         // Main panel
         JPanel mainPanel = new JPanel();
@@ -64,6 +89,7 @@ public class CreateUserView extends JFrame {
             new EmptyBorder(20, 20, 20, 20)
         ));
         formPanel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        formPanel.setMaximumSize(new Dimension(400, Integer.MAX_VALUE)); // Limit width for better appearance
 
         // Username
         JLabel usernameLabel = new JLabel("Username");
@@ -111,7 +137,12 @@ public class CreateUserView extends JFrame {
         formPanel.add(buttonsPanel);
 
         mainPanel.add(formPanel);
-        add(mainPanel);
+        
+        // Add the mainPanel to the center of the container
+        container.add(mainPanel, BorderLayout.CENTER);
+        
+        // Add the container to the frame
+        add(container);
     }
 
     private void styleTextField(JTextField field) {

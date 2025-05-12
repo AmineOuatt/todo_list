@@ -1,14 +1,38 @@
 package View;
 
+import java.awt.BasicStroke;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Cursor;
+import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.GridLayout;
+import java.awt.RenderingHints;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.List;
+
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.JButton;
+import javax.swing.JCheckBox;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JSplitPane;
+import javax.swing.border.EmptyBorder;
+
 import Controller.TaskController;
 import Model.Task;
-import java.awt.*;
-import java.awt.event.*;
-import java.text.SimpleDateFormat;
-import java.util.*;
-import java.util.List;
-import javax.swing.*;
-import javax.swing.border.EmptyBorder;
 
 public class DashboardView extends JFrame {
     private int userId;
@@ -31,6 +55,9 @@ public class DashboardView extends JFrame {
         setSize(1000, 700);
         setLocationRelativeTo(null);
         setBackground(BACKGROUND_COLOR);
+        
+        // Set to fullscreen mode
+        setExtendedState(JFrame.MAXIMIZED_BOTH);
 
         // Create main container
         JPanel mainContainer = new JPanel(new BorderLayout(20, 20));
