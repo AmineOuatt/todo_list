@@ -196,6 +196,26 @@ public class TaskFrame extends JFrame {
                     panel.setBackground(SIDEBAR_COLOR);
                 }
                 
+                // Title panel without checkbox
+                JPanel titlePanel = new JPanel(new BorderLayout(10, 0));
+                titlePanel.setBackground(panel.getBackground());
+                titlePanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+                
+                // Status indicator icon
+                JLabel statusIcon = new JLabel();
+                if ("Completed".equals(task.getStatus())) {
+                    statusIcon.setText("✓");
+                    statusIcon.setForeground(COMPLETED_COLOR);
+                } else if ("In Progress".equals(task.getStatus())) {
+                    statusIcon.setText("►");
+                    statusIcon.setForeground(PRIMARY_COLOR);
+                } else {
+                    statusIcon.setText("○");
+                    statusIcon.setForeground(PENDING_COLOR);
+                }
+                statusIcon.setFont(new Font("Segoe UI", Font.BOLD, 16));
+                titlePanel.add(statusIcon, BorderLayout.WEST);
+                
                 // Title
                 JLabel titleLabel = new JLabel(task.getTitle());
                 titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
@@ -204,11 +224,14 @@ public class TaskFrame extends JFrame {
                 } else if ("Completed".equals(task.getStatus())) {
                     titleLabel.setForeground(Color.GRAY);
                     titleLabel.setFont(titleLabel.getFont().deriveFont(Font.PLAIN));
+                    // Add strikethrough for completed tasks
+                    titleLabel.setText("<html><strike>" + task.getTitle() + "</strike></html>");
                 } else {
                     titleLabel.setForeground(TEXT_COLOR);
                 }
-                titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-                panel.add(titleLabel);
+                titlePanel.add(titleLabel, BorderLayout.CENTER);
+                
+                panel.add(titlePanel);
                 
                 // Add some space
                 panel.add(Box.createVerticalStrut(5));
@@ -313,6 +336,43 @@ public class TaskFrame extends JFrame {
                 Task selectedTask = taskList.getSelectedValue();
                 if (selectedTask != null) {
                     displayTaskDetails(selectedTask);
+                }
+            }
+        });
+        
+        // Add mouse listener for double-click to toggle completion status
+        taskList.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (e.getClickCount() == 2) {
+                    int index = taskList.locationToIndex(e.getPoint());
+                    if (index >= 0) {
+                        Task task = taskListModel.getElementAt(index);
+                        // Toggle between Completed and Pending
+                        String newStatus = "Completed".equals(task.getStatus()) ? "Pending" : "Completed";
+                        
+                        // Update in database
+                        boolean success = TaskController.updateTask(
+                            task.getTaskId(),
+                            task.getTitle(),
+                            task.getDescription(),
+                            newStatus,
+                            task.getDueDate(),
+                            task.getCategory()
+                        );
+                        
+                        if (success) {
+                            // Refresh the list to show changes
+                            loadTasks();
+                            // Show feedback
+                            JOptionPane.showMessageDialog(
+                                TaskFrame.this,
+                                "Task marked as " + newStatus,
+                                "Status Updated",
+                                JOptionPane.INFORMATION_MESSAGE
+                            );
+                        }
+                    }
                 }
             }
         });
@@ -1149,15 +1209,15 @@ public class TaskFrame extends JFrame {
         headerPanel.add(titlePanel, BorderLayout.WEST);
         
         // Add panel to contain buttons
-        JPanel buttonsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        JPanel buttonsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 5));
         buttonsPanel.setBackground(BACKGROUND_COLOR);
         
-        JButton saveButton = new JButton("Save");
-        saveButton.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        JButton saveButton = new JButton("Save Task");
+        saveButton.setFont(new Font("Segoe UI", Font.BOLD, 14));
         saveButton.setFocusPainted(false);
         saveButton.setBackground(PRIMARY_COLOR);
         saveButton.setForeground(Color.WHITE);
-        saveButton.setBorder(BorderFactory.createEmptyBorder(5, 15, 5, 15));
+        saveButton.setBorder(BorderFactory.createEmptyBorder(8, 15, 8, 15));
         saveButton.addActionListener(e -> {
             Task selectedTask = taskList.getSelectedValue();
             if (selectedTask == null) {
@@ -1167,21 +1227,21 @@ public class TaskFrame extends JFrame {
             }
         });
         
-        deleteButton = new JButton("Delete");
-        deleteButton.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        deleteButton = new JButton("Delete Task");
+        deleteButton.setFont(new Font("Segoe UI", Font.BOLD, 14));
         deleteButton.setFocusPainted(false);
         deleteButton.setBackground(new Color(220, 53, 69));
         deleteButton.setForeground(Color.WHITE);
-        deleteButton.setBorder(BorderFactory.createEmptyBorder(5, 15, 5, 15));
+        deleteButton.setBorder(BorderFactory.createEmptyBorder(8, 15, 8, 15));
         deleteButton.addActionListener(e -> handleDeleteTask());
         deleteButton.setEnabled(false); // Only enable when a task is selected
         
-        JButton clearButton = new JButton("Clear");
+        JButton clearButton = new JButton("Clear Form");
         clearButton.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         clearButton.setFocusPainted(false);
         clearButton.setBackground(HOVER_COLOR);
         clearButton.setForeground(TEXT_COLOR);
-        clearButton.setBorder(BorderFactory.createEmptyBorder(5, 15, 5, 15));
+        clearButton.setBorder(BorderFactory.createEmptyBorder(8, 15, 8, 15));
         clearButton.addActionListener(e -> clearFields());
         
         buttonsPanel.add(clearButton);
@@ -1189,10 +1249,21 @@ public class TaskFrame extends JFrame {
         buttonsPanel.add(deleteButton);
         headerPanel.add(buttonsPanel, BorderLayout.EAST);
         
-        // Form panel
+        // Create a split panel for form and description
+        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
+        splitPane.setBorder(null);
+        splitPane.setDividerSize(5);
+        splitPane.setResizeWeight(0.4); // Let the right panel get more space when resizing
+        splitPane.setBackground(BACKGROUND_COLOR);
+        
+        // Set initial divider location to 40% for form fields, 60% for description
+        splitPane.setDividerLocation(0.4);
+        
+        // Left panel for form fields
         JPanel formPanel = new JPanel();
         formPanel.setLayout(new GridBagLayout());
         formPanel.setBackground(BACKGROUND_COLOR);
+        formPanel.setBorder(new EmptyBorder(15, 15, 15, 15));
         
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.fill = GridBagConstraints.HORIZONTAL;
@@ -1317,18 +1388,16 @@ public class TaskFrame extends JFrame {
         
         formPanel.add(newCategoryFieldPanel, gbc);
         
-        gbc.gridy++;
-        gbc.insets = new Insets(15, 0, 10, 0);
+        // Right panel for description area
+        JPanel descriptionPanel = new JPanel(new BorderLayout(0, 10));
+        descriptionPanel.setBackground(BACKGROUND_COLOR);
+        descriptionPanel.setBorder(new EmptyBorder(15, 15, 15, 15));
         
-        // Description area
         JLabel descriptionLabel = new JLabel("Description");
         descriptionLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        formPanel.add(descriptionLabel, gbc);
+        descriptionPanel.add(descriptionLabel, BorderLayout.NORTH);
         
-        gbc.gridy++;
-        gbc.weighty = 1.0;
-        gbc.fill = GridBagConstraints.BOTH;
-        descriptionField = new JTextArea(8, 20);
+        descriptionField = new JTextArea();
         descriptionField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         descriptionField.setLineWrap(true);
         descriptionField.setWrapStyleWord(true);
@@ -1338,10 +1407,14 @@ public class TaskFrame extends JFrame {
             BorderFactory.createLineBorder(BORDER_COLOR),
             BorderFactory.createEmptyBorder(8, 8, 8, 8)
         ));
-        formPanel.add(descScrollPane, gbc);
+        descriptionPanel.add(descScrollPane, BorderLayout.CENTER);
+        
+        // Add panels to split pane
+        splitPane.setLeftComponent(formPanel);
+        splitPane.setRightComponent(descriptionPanel);
         
         panel.add(headerPanel, BorderLayout.NORTH);
-        panel.add(formPanel, BorderLayout.CENTER);
+        panel.add(splitPane, BorderLayout.CENTER);
         
         return panel;
     }
@@ -1361,6 +1434,33 @@ public class TaskFrame extends JFrame {
         JPanel panel = new JPanel(new BorderLayout(20, 20));
         panel.setBackground(BACKGROUND_COLOR);
         panel.setBorder(new EmptyBorder(20, 20, 20, 20));
+        
+        // Header with refresh button
+        JPanel headerPanel = new JPanel(new BorderLayout(10, 0));
+        headerPanel.setBackground(BACKGROUND_COLOR);
+        headerPanel.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, BORDER_COLOR));
+        
+        // Title
+        JLabel titleLabel = new JLabel("Dashboard");
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 24));
+        titleLabel.setForeground(TEXT_COLOR);
+        headerPanel.add(titleLabel, BorderLayout.WEST);
+        
+        // Refresh button
+        JButton refreshButton = new JButton("↻ Refresh Dashboard");
+        refreshButton.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        refreshButton.setFocusPainted(false);
+        refreshButton.setBackground(PRIMARY_COLOR);
+        refreshButton.setForeground(Color.WHITE);
+        refreshButton.setBorder(BorderFactory.createEmptyBorder(8, 15, 8, 15));
+        refreshButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        refreshButton.addActionListener(e -> {
+            updateDashboard();
+            JOptionPane.showMessageDialog(panel, "Dashboard refreshed!", "Refresh", JOptionPane.INFORMATION_MESSAGE);
+        });
+        
+        headerPanel.add(refreshButton, BorderLayout.EAST);
+        panel.add(headerPanel, BorderLayout.NORTH);
 
         // Create split pane for left and right sections
         JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
@@ -1773,10 +1873,33 @@ public class TaskFrame extends JFrame {
             BorderFactory.createEmptyBorder(15, 15, 15, 15)
         ));
         
+        // Title and buttons panel
+        JPanel titleButtonPanel = new JPanel(new BorderLayout(10, 0));
+        titleButtonPanel.setBackground(SIDEBAR_COLOR);
+        
         // Title label on the left
         JLabel titleLabel = new JLabel("Task Manager");
         titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 24));
         titleLabel.setForeground(TEXT_COLOR);
+        titleButtonPanel.add(titleLabel, BorderLayout.WEST);
+        
+        // Buttons panel for refresh and new
+        JPanel buttonsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        buttonsPanel.setBackground(SIDEBAR_COLOR);
+        
+        // Refresh button
+        JButton refreshButton = new JButton("↻");
+        refreshButton.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        refreshButton.setFocusPainted(false);
+        refreshButton.setContentAreaFilled(false);
+        refreshButton.setBorderPainted(false);
+        refreshButton.setToolTipText("Refresh Tasks");
+        refreshButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        refreshButton.setForeground(PRIMARY_COLOR);
+        refreshButton.addActionListener(e -> {
+            loadTasks();
+            JOptionPane.showMessageDialog(this, "Tasks refreshed!", "Refresh", JOptionPane.INFORMATION_MESSAGE);
+        });
         
         // Add button on the right
         JButton newButton = new JButton("+ New Task");
@@ -1790,14 +1913,23 @@ public class TaskFrame extends JFrame {
             showTaskDetailsView();
         });
         
-        // Panel for title and new button
-        JPanel titleButtonPanel = new JPanel(new BorderLayout(10, 0));
-        titleButtonPanel.setBackground(SIDEBAR_COLOR);
-        titleButtonPanel.add(titleLabel, BorderLayout.WEST);
-        titleButtonPanel.add(newButton, BorderLayout.EAST);
+        buttonsPanel.add(refreshButton);
+        buttonsPanel.add(newButton);
+        titleButtonPanel.add(buttonsPanel, BorderLayout.EAST);
         
         headerPanel.add(titleButtonPanel, BorderLayout.NORTH);
         
+        // Add help message about double-clicking
+        JPanel helpPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 5));
+        helpPanel.setBackground(SIDEBAR_COLOR);
+        
+        JLabel helpLabel = new JLabel("💡 Double-click a task to toggle completion status");
+        helpLabel.setFont(new Font("Segoe UI", Font.ITALIC, 11));
+        helpLabel.setForeground(new Color(120, 120, 120));
+        helpPanel.add(helpLabel);
+        
+        headerPanel.add(helpPanel, BorderLayout.SOUTH);
+
         // Search field below the title
         JPanel searchPanel = new JPanel(new BorderLayout(5, 0));
         searchPanel.setBackground(SIDEBAR_COLOR);
@@ -2335,10 +2467,33 @@ public class TaskFrame extends JFrame {
             BorderFactory.createEmptyBorder(15, 15, 15, 15)
         ));
         
+        // Title and buttons panel
+        JPanel titleButtonPanel = new JPanel(new BorderLayout(10, 0));
+        titleButtonPanel.setBackground(SIDEBAR_COLOR);
+        
         // Title label on the left
         JLabel titleLabel = new JLabel("Notes Manager");
         titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 24));
         titleLabel.setForeground(TEXT_COLOR);
+        titleButtonPanel.add(titleLabel, BorderLayout.WEST);
+        
+        // Buttons panel for refresh and new
+        JPanel buttonsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        buttonsPanel.setBackground(SIDEBAR_COLOR);
+        
+        // Refresh button
+        JButton refreshButton = new JButton("↻");
+        refreshButton.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        refreshButton.setFocusPainted(false);
+        refreshButton.setContentAreaFilled(false);
+        refreshButton.setBorderPainted(false);
+        refreshButton.setToolTipText("Refresh Notes");
+        refreshButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        refreshButton.setForeground(PRIMARY_COLOR);
+        refreshButton.addActionListener(e -> {
+            loadNotes();
+            JOptionPane.showMessageDialog(this, "Notes refreshed!", "Refresh", JOptionPane.INFORMATION_MESSAGE);
+        });
         
         // Add button on the right
         JButton newButton = new JButton("+ New Note");
@@ -2353,11 +2508,9 @@ public class TaskFrame extends JFrame {
             showNotesDetailsView();
         });
         
-        // Panel for title and new button
-        JPanel titleButtonPanel = new JPanel(new BorderLayout(10, 0));
-        titleButtonPanel.setBackground(SIDEBAR_COLOR);
-        titleButtonPanel.add(titleLabel, BorderLayout.WEST);
-        titleButtonPanel.add(newButton, BorderLayout.EAST);
+        buttonsPanel.add(refreshButton);
+        buttonsPanel.add(newButton);
+        titleButtonPanel.add(buttonsPanel, BorderLayout.EAST);
         
         headerPanel.add(titleButtonPanel, BorderLayout.NORTH);
         
@@ -2556,42 +2709,54 @@ public class TaskFrame extends JFrame {
         headerPanel.add(titlePanel, BorderLayout.WEST);
         
         // Add panel to contain buttons
-        JPanel buttonsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        JPanel buttonsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 5));
         buttonsPanel.setBackground(BACKGROUND_COLOR);
         
-        JButton clearButton = new JButton("Clear");
+        JButton clearButton = new JButton("Clear Form");
         clearButton.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         clearButton.setFocusPainted(false);
         clearButton.setBackground(HOVER_COLOR);
         clearButton.setForeground(TEXT_COLOR);
-        clearButton.setBorder(BorderFactory.createEmptyBorder(5, 15, 5, 15));
+        clearButton.setBorder(BorderFactory.createEmptyBorder(8, 15, 8, 15));
         clearButton.addActionListener(e -> clearNotesFields());
         
         JButton addButton = new JButton("Save Note");
-        addButton.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        addButton.setFont(new Font("Segoe UI", Font.BOLD, 14));
         addButton.setFocusPainted(false);
         addButton.setBackground(PRIMARY_COLOR);
         addButton.setForeground(Color.WHITE);
-        addButton.setBorder(BorderFactory.createEmptyBorder(5, 15, 5, 15));
+        addButton.setBorder(BorderFactory.createEmptyBorder(8, 15, 8, 15));
         addButton.addActionListener(e -> saveNote());
         
-        JButton deleteButton = new JButton("Delete Note");
-        deleteButton.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        deleteButton.setFocusPainted(false);
-        deleteButton.setBackground(new Color(220, 53, 69));
-        deleteButton.setForeground(Color.WHITE);
-        deleteButton.setBorder(BorderFactory.createEmptyBorder(5, 15, 5, 15));
-        deleteButton.addActionListener(e -> deleteNote());
+        JButton deleteNoteButton = new JButton("Delete Note");
+        deleteNoteButton.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        deleteNoteButton.setFocusPainted(false);
+        deleteNoteButton.setBackground(new Color(220, 53, 69));
+        deleteNoteButton.setForeground(Color.WHITE);
+        deleteNoteButton.setBorder(BorderFactory.createEmptyBorder(8, 15, 8, 15));
+        deleteNoteButton.addActionListener(e -> deleteNote());
+        deleteNoteButton.setEnabled(false); // Only enable when a note is selected
         
         buttonsPanel.add(clearButton);
         buttonsPanel.add(addButton);
-        buttonsPanel.add(deleteButton);
+        buttonsPanel.add(deleteNoteButton);
         headerPanel.add(buttonsPanel, BorderLayout.EAST);
         
-        // Form panel for note details
+        // Create a split panel for form and content
+        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
+        splitPane.setBorder(null);
+        splitPane.setDividerSize(5);
+        splitPane.setResizeWeight(0.4); // Let the right panel get more space when resizing
+        splitPane.setBackground(BACKGROUND_COLOR);
+        
+        // Set initial divider location to 40% for form fields, 60% for content
+        splitPane.setDividerLocation(0.4);
+        
+        // Left panel for form fields
         JPanel formPanel = new JPanel();
         formPanel.setLayout(new GridBagLayout());
         formPanel.setBackground(BACKGROUND_COLOR);
+        formPanel.setBorder(new EmptyBorder(15, 15, 15, 15));
         
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.fill = GridBagConstraints.HORIZONTAL;
@@ -2686,18 +2851,16 @@ public class TaskFrame extends JFrame {
         
         formPanel.add(newCategoryPanel, gbc);
         
-        gbc.gridy++;
-        gbc.insets = new Insets(15, 0, 10, 0);
+        // Right panel for content area
+        JPanel contentPanel = new JPanel(new BorderLayout(0, 10));
+        contentPanel.setBackground(BACKGROUND_COLOR);
+        contentPanel.setBorder(new EmptyBorder(15, 15, 15, 15));
         
-        // Description/Content area
-        JLabel contentLabel = new JLabel("Description");
+        JLabel contentLabel = new JLabel("Content");
         contentLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        formPanel.add(contentLabel, gbc);
+        contentPanel.add(contentLabel, BorderLayout.NORTH);
         
-        gbc.gridy++;
-        gbc.weighty = 1.0;
-        gbc.fill = GridBagConstraints.BOTH;
-        notesContentArea = new JTextArea(8, 20);
+        notesContentArea = new JTextArea();
         notesContentArea.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         notesContentArea.setLineWrap(true);
         notesContentArea.setWrapStyleWord(true);
@@ -2707,10 +2870,14 @@ public class TaskFrame extends JFrame {
             BorderFactory.createLineBorder(BORDER_COLOR),
             BorderFactory.createEmptyBorder(8, 8, 8, 8)
         ));
-        formPanel.add(contentScroll, gbc);
+        contentPanel.add(contentScroll, BorderLayout.CENTER);
+        
+        // Add panels to split pane
+        splitPane.setLeftComponent(formPanel);
+        splitPane.setRightComponent(contentPanel);
         
         panel.add(headerPanel, BorderLayout.NORTH);
-        panel.add(formPanel, BorderLayout.CENTER);
+        panel.add(splitPane, BorderLayout.CENTER);
         
         return panel;
     }
@@ -2782,6 +2949,27 @@ public class TaskFrame extends JFrame {
             notesCategoryComboBox.setSelectedIndex(0); // No Category
         }
         
+        // Enable delete button for notes panel
+        // Find all components in the header panel's button panel
+        JPanel notesPanel = (JPanel) mainContentPanel.getComponent(4);
+        JPanel noteDetailsPanel = (JPanel) notesPanel.getComponent(1);  
+        JPanel headerPanel = (JPanel) noteDetailsPanel.getComponent(0);
+        
+        // Find the delete button in the header panel's button panel and enable it
+        Component[] headerComps = headerPanel.getComponents();
+        for (Component comp : headerComps) {
+            if (comp instanceof JPanel) {
+                JPanel buttonsPanel = (JPanel) comp;
+                Component[] buttons = buttonsPanel.getComponents();
+                for (Component btn : buttons) {
+                    if (btn instanceof JButton && ((JButton)btn).getText().equals("Delete Note")) {
+                        btn.setEnabled(true);
+                        break;
+                    }
+                }
+            }
+        }
+        
         // Show the note details panel
         showNotesDetailsView();
     }
@@ -2811,6 +2999,27 @@ public class TaskFrame extends JFrame {
         notesContentArea.setText("");
         notesCategoryComboBox.setSelectedIndex(0);
         currentNote = null;
+        
+        // Disable delete button for notes panel
+        // Find all components in the header panel's button panel
+        JPanel notesPanel = (JPanel) mainContentPanel.getComponent(4);
+        JPanel noteDetailsPanel = (JPanel) notesPanel.getComponent(1);  
+        JPanel headerPanel = (JPanel) noteDetailsPanel.getComponent(0);
+        
+        // Find the delete button in the header panel's button panel and disable it
+        Component[] headerComps = headerPanel.getComponents();
+        for (Component comp : headerComps) {
+            if (comp instanceof JPanel) {
+                JPanel buttonsPanel = (JPanel) comp;
+                Component[] buttons = buttonsPanel.getComponents();
+                for (Component btn : buttons) {
+                    if (btn instanceof JButton && ((JButton)btn).getText().equals("Delete Note")) {
+                        btn.setEnabled(false);
+                        break;
+                    }
+                }
+            }
+        }
     }
 
     /**
