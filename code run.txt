@@ -1,0 +1,2 @@
+java -cp "bin;lib/mysql-connector-j-9.2.0.jar" View.Main
+javac -d bin -cp "lib/*" src/Model/*.java src/Controller/*.java src/View/*.java

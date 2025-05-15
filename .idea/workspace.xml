@@ -4,97 +4,166 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="cdfc9f9c-cc30-40b2-8446-b34e478a45fa" name="Changes" comment="" />
+    <list default="true" id="086746fa-6a0c-4870-a233-5da979dd84ad" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/modules.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ProjetPOO_S2.iml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/Controller/TaskController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/Controller/TaskController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/Model/Task.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/Model/Task.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/Model/TaskDAO.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/Model/TaskDAO.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/View/TaskFrame.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/View/TaskFrame.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/Controller/CategoryController.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/Controller/CategoryController.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/Controller/NoteController.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/Controller/NoteController.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/Controller/SubTaskController.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/Controller/SubTaskController.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/Controller/TaskController.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/Controller/TaskController.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/Controller/UserController.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/Controller/UserController.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/Model/Category.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/Model/Category.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/Model/CategoryDAO.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/Model/CategoryDAO.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/Model/DatabaseConnection.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/Model/DatabaseConnection.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/Model/Note.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/Model/Note.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/Model/NoteDAO.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/Model/NoteDAO.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/Model/SubTask.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/Model/SubTask.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/Model/Task.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/Model/Task.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/Model/TaskDAO.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/Model/TaskDAO.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/Model/User.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/Model/User.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/Model/UserDAO.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/Model/UserDAO.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/View/CreateUserView$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/View/CreateUserView$1.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/View/CreateUserView.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/View/CreateUserView.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/View/DashboardView$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/View/DashboardView$1.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/View/DashboardView$10.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/View/DashboardView$10.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/View/DashboardView$2.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/View/DashboardView$2.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/View/DashboardView$3.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/View/DashboardView$3.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/View/DashboardView$4.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/View/DashboardView$4.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/View/DashboardView$5.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/View/DashboardView$5.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/View/DashboardView$6.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/View/DashboardView$6.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/View/DashboardView$7.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/View/DashboardView$7.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/View/DashboardView$8.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/View/DashboardView$8.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/View/DashboardView$9.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/View/DashboardView$9.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/View/DashboardView.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/View/DashboardView.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/View/LoginView$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/View/LoginView$1.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/View/LoginView$2.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/View/LoginView$2.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/View/LoginView.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/View/LoginView.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/View/Main.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/View/Main.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/View/NotesView$NoteListCellRenderer.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/View/NotesView$NoteListCellRenderer.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/View/NotesView.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/View/NotesView.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/View/PomodoroView$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/View/PomodoroView$1.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/View/PomodoroView$2.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/View/PomodoroView$2.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/View/PomodoroView$CircularProgress.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/View/PomodoroView$CircularProgress.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/View/PomodoroView.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/View/PomodoroView.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/View/TaskFrame$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/View/TaskFrame$1.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/View/TaskFrame$10.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/View/TaskFrame$10.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/View/TaskFrame$11.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/View/TaskFrame$11.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/View/TaskFrame$12.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/View/TaskFrame$12.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/View/TaskFrame$13.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/View/TaskFrame$13.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/View/TaskFrame$14.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/View/TaskFrame$14.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/View/TaskFrame$15.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/View/TaskFrame$15.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/View/TaskFrame$16.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/View/TaskFrame$16.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/View/TaskFrame$17.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/View/TaskFrame$17.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/View/TaskFrame$18.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/View/TaskFrame$18.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/View/TaskFrame$19.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/View/TaskFrame$19.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/View/TaskFrame$2.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/View/TaskFrame$2.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/View/TaskFrame$20.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/View/TaskFrame$20.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/View/TaskFrame$21.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/View/TaskFrame$21.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/View/TaskFrame$22.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/View/TaskFrame$22.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/View/TaskFrame$23.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/View/TaskFrame$23.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/View/TaskFrame$24.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/View/TaskFrame$24.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/View/TaskFrame$3.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/View/TaskFrame$3.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/View/TaskFrame$4.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/View/TaskFrame$4.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/View/TaskFrame$5.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/View/TaskFrame$5.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/View/TaskFrame$6.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/View/TaskFrame$6.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/View/TaskFrame$7.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/View/TaskFrame$7.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/View/TaskFrame$8.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/View/TaskFrame$8.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/View/TaskFrame$9.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/View/TaskFrame$9.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/View/TaskFrame$ChartPanel.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/View/TaskFrame$ChartPanel.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/View/TaskFrame$CircularProgressPanel.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/View/TaskFrame$CircularProgressPanel.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/View/TaskFrame$NoteListCellRenderer.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/View/TaskFrame$NoteListCellRenderer.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/View/TaskFrame$PomodoroMode.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/View/TaskFrame$PomodoroMode.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/View/TaskFrame$TaskListCellRenderer.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/View/TaskFrame$TaskListCellRenderer.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/View/TaskFrame.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/View/TaskFrame.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/View/UserManagementView$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/View/UserManagementView$1.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/View/UserManagementView.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/View/UserManagementView.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/View/UserSelectionView$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/View/UserSelectionView$1.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/View/UserSelectionView$2.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/View/UserSelectionView$2.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/View/UserSelectionView$3.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/View/UserSelectionView$3.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/View/UserSelectionView$4.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/View/UserSelectionView$4.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/View/UserSelectionView.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/View/UserSelectionView.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/module-info.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/module-info.class" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Class" />
+      </list>
+    </option>
+  </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
-  <component name="GitHubPullRequestSearchHistory">{
-  &quot;lastFilter&quot;: {
-    &quot;state&quot;: &quot;OPEN&quot;,
-    &quot;assignee&quot;: &quot;AmineOuatt&quot;
-  }
-}</component>
-  <component name="GithubPullRequestsUISettings">{
-  &quot;selectedUrlAndAccountId&quot;: {
-    &quot;url&quot;: &quot;https://github.com/AmineOuatt/Poo_S2.git&quot;,
-    &quot;accountId&quot;: &quot;f22962e8-d9ec-4c09-b88d-c4a90e12a06f&quot;
-  }
-}</component>
   <component name="ProjectColorInfo">{
-  &quot;associatedIndex&quot;: 1
+  &quot;associatedIndex&quot;: 7
 }</component>
-  <component name="ProjectId" id="2uYnSpbtNdUxT8PvldTQf3ykoHI" />
+  <component name="ProjectId" id="2udWSurDSOKMCxOaShmOa1VFM0X" />
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
-    &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
-    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;C:/Users/Lenovo/eclipse-workspace/POO&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;project.structure.last.edited&quot;: &quot;Global Libraries&quot;,
-    &quot;project.structure.proportion&quot;: &quot;0.15&quot;,
-    &quot;project.structure.side.proportion&quot;: &quot;0.2&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;configurable.group.build&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Application.DatabaseConnection.executor": "Run",
+    "Application.Main.executor": "Run",
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "git-widget-placeholder": "main",
+    "kotlin-language-version-configured": "true",
+    "last_opened_file_path": "C:/Users/ALGER/Downloads/mysql-connector-j-9.2.0/mysql-connector-j-9.2.0/mysql-connector-j-9.2.0.jar",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "onboarding.tips.debug.path": "C:/Users/ALGER/Desktop/ProjetPOO_S2/src/Main.java",
+    "project.structure.last.edited": "Modules",
+    "project.structure.proportion": "0.0",
+    "project.structure.side.proportion": "0.0",
+    "vue.rearranger.settings.migration": "true"
+  },
+  "keyToStringList": {
+    "DatabaseDriversLRU": [
+      "mysql"
+    ]
   }
-}</component>
+}]]></component>
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-jdk-9823dce3aa75-a94e463ab2e7-intellij.indexing.shared.core-IU-243.26053.27" />
-        <option value="bundled-js-predefined-d6986cc7102b-1632447f56bf-JavaScript-IU-243.26053.27" />
+        <option value="bundled-jdk-9823dce3aa75-fbdcb00ec9e3-intellij.indexing.shared.core-IU-251.25410.129" />
+        <option value="bundled-js-predefined-d6986cc7102b-6a121458b545-JavaScript-IU-251.25410.129" />
       </set>
     </attachedChunks>
   </component>
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="TaskManager">
     <task active="true" id="Default" summary="Default task">
-      <changelist id="cdfc9f9c-cc30-40b2-8446-b34e478a45fa" name="Changes" comment="" />
-      <created>1742434380257</created>
+      <changelist id="086746fa-6a0c-4870-a233-5da979dd84ad" name="Changes" comment="" />
+      <created>1742578973683</created>
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
-      <updated>1742434380257</updated>
-      <workItem from="1742434382036" duration="173000" />
-      <workItem from="1742434567844" duration="242000" />
-      <workItem from="1742434822698" duration="332000" />
-      <workItem from="1742435485003" duration="118000" />
-      <workItem from="1742435613176" duration="141000" />
-      <workItem from="1742435774221" duration="6000" />
-      <workItem from="1742435792519" duration="289000" />
-      <workItem from="1742436147247" duration="107000" />
-      <workItem from="1742436266319" duration="379000" />
-      <workItem from="1742436657418" duration="341000" />
-      <workItem from="1742437009092" duration="214000" />
+      <updated>1742578973683</updated>
+      <workItem from="1742578979538" duration="2523000" />
+      <workItem from="1742582934219" duration="1646000" />
+      <workItem from="1744196067658" duration="70000" />
+      <workItem from="1747087476840" duration="2924000" />
+      <workItem from="1747338187730" duration="2837000" />
     </task>
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
-  </component>
-  <component name="Vcs.Log.Tabs.Properties">
-    <option name="TAB_STATES">
-      <map>
-        <entry key="MAIN">
-          <value>
-            <State />
-          </value>
-        </entry>
-      </map>
-    </option>
   </component>
 </project>

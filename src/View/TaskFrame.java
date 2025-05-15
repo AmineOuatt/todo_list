@@ -318,6 +318,13 @@ public class TaskFrame extends JFrame {
     private List<SubTask> currentSubTasks = new ArrayList<>();
     private JPanel subTasksPanel;
 
+    // Recurring task components
+    private JCheckBox isRecurringCheckBox;
+    private JComboBox<String> recurrenceTypeComboBox;
+    private JSpinner recurrenceIntervalSpinner;
+    private JSpinner recurrenceEndDateSpinner;
+    private JPanel recurrencePanel;
+
     public TaskFrame(int userId) {
         this.userId = userId;
         
@@ -1228,11 +1235,19 @@ public class TaskFrame extends JFrame {
         // Set initial divider location to 40% for form fields, 60% for description and subtasks
         horizontalSplitPane.setDividerLocation(0.4);
         
-        // Left panel for form fields
+        // Left panel for form fields - MODIFIÉ: Ajouter un JScrollPane pour permettre le défilement
         JPanel formPanel = new JPanel();
         formPanel.setLayout(new GridBagLayout());
         formPanel.setBackground(BACKGROUND_COLOR);
         formPanel.setBorder(new EmptyBorder(15, 15, 15, 15));
+        
+        // Création d'un JScrollPane pour le panneau de formulaire
+        JScrollPane formScrollPane = new JScrollPane(formPanel);
+        formScrollPane.setBorder(null);
+        formScrollPane.setBackground(BACKGROUND_COLOR);
+        formScrollPane.getVerticalScrollBar().setUnitIncrement(16);
+        formScrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        formScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
         
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.fill = GridBagConstraints.HORIZONTAL;
@@ -1330,6 +1345,150 @@ public class TaskFrame extends JFrame {
             BorderFactory.createEmptyBorder(8, 10, 8, 10)
         ));
         formPanel.add(dueDateSpinner, gbc);
+        
+        // Recurring task section
+        gbc.gridy++;
+        gbc.insets = new Insets(15, 0, 10, 0);
+        
+        JLabel recurringLabel = new JLabel("Recurring Task");
+        recurringLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        formPanel.add(recurringLabel, gbc);
+        
+        gbc.gridy++;
+        gbc.insets = new Insets(0, 0, 5, 0);
+        
+        isRecurringCheckBox = new JCheckBox("Make this task recurring");
+        isRecurringCheckBox.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        isRecurringCheckBox.setBackground(BACKGROUND_COLOR);
+        isRecurringCheckBox.addActionListener(e -> toggleRecurrenceControls());
+        formPanel.add(isRecurringCheckBox, gbc);
+        
+        // Recurrence panel that will be toggled
+        recurrencePanel = new JPanel();
+        recurrencePanel.setLayout(new GridBagLayout());
+        recurrencePanel.setBackground(BACKGROUND_COLOR);
+        recurrencePanel.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createMatteBorder(1, 0, 1, 0, BORDER_COLOR),
+            BorderFactory.createEmptyBorder(10, 0, 10, 0)
+        ));
+        
+        GridBagConstraints gbcRecur = new GridBagConstraints();
+        gbcRecur.fill = GridBagConstraints.HORIZONTAL;
+        gbcRecur.insets = new Insets(5, 0, 10, 0);
+        gbcRecur.weightx = 1.0;
+        gbcRecur.gridx = 0;
+        gbcRecur.gridy = 0;
+        
+        // Recurrence type
+        JLabel typeLabel = new JLabel("Recurrence Pattern");
+        typeLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        recurrencePanel.add(typeLabel, gbcRecur);
+        
+        gbcRecur.gridy++;
+        String[] recurrenceTypes = {"Daily", "Weekly", "Monthly", "Yearly"};
+        recurrenceTypeComboBox = new JComboBox<>(recurrenceTypes);
+        recurrenceTypeComboBox.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        recurrenceTypeComboBox.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(BORDER_COLOR),
+            BorderFactory.createEmptyBorder(8, 10, 8, 10)
+        ));
+        recurrencePanel.add(recurrenceTypeComboBox, gbcRecur);
+        
+        // Recurrence interval
+        gbcRecur.gridy++;
+        gbcRecur.insets = new Insets(15, 0, 5, 0);
+        JLabel intervalLabel = new JLabel("Repeat Every");
+        intervalLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        recurrencePanel.add(intervalLabel, gbcRecur);
+        
+        gbcRecur.gridy++;
+        gbcRecur.insets = new Insets(0, 0, 15, 0);
+        
+        JPanel intervalPanel = new JPanel(new BorderLayout(10, 0));
+        intervalPanel.setBackground(BACKGROUND_COLOR);
+        
+        SpinnerNumberModel intervalModel = new SpinnerNumberModel(1, 1, 100, 1);
+        recurrenceIntervalSpinner = new JSpinner(intervalModel);
+        recurrenceIntervalSpinner.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        recurrenceIntervalSpinner.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(BORDER_COLOR),
+            BorderFactory.createEmptyBorder(8, 10, 8, 10)
+        ));
+        
+        JLabel unitLabel = new JLabel("day(s)");
+        unitLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        
+        // Update unit label when recurrence type changes
+        recurrenceTypeComboBox.addActionListener(e -> {
+            String selectedType = (String) recurrenceTypeComboBox.getSelectedItem();
+            if (selectedType.equals("Daily")) {
+                unitLabel.setText("day(s)");
+            } else if (selectedType.equals("Weekly")) {
+                unitLabel.setText("week(s)");
+            } else if (selectedType.equals("Monthly")) {
+                unitLabel.setText("month(s)");
+            } else if (selectedType.equals("Yearly")) {
+                unitLabel.setText("year(s)");
+            }
+        });
+        
+        intervalPanel.add(recurrenceIntervalSpinner, BorderLayout.CENTER);
+        intervalPanel.add(unitLabel, BorderLayout.EAST);
+        
+        recurrencePanel.add(intervalPanel, gbcRecur);
+        
+        // Ajouter un nouveau champ pour le nombre d'occurrences
+        gbcRecur.gridy++;
+        gbcRecur.insets = new Insets(15, 0, 5, 0);
+        JLabel occurrencesLabel = new JLabel("Number of Occurrences");
+        occurrencesLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        recurrencePanel.add(occurrencesLabel, gbcRecur);
+        
+        gbcRecur.gridy++;
+        gbcRecur.insets = new Insets(0, 0, 15, 0);
+        SpinnerNumberModel occurrencesModel = new SpinnerNumberModel(5, 1, 100, 1);
+        JSpinner occurrencesSpinner = new JSpinner(occurrencesModel);
+        occurrencesSpinner.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        occurrencesSpinner.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(BORDER_COLOR),
+            BorderFactory.createEmptyBorder(8, 10, 8, 10)
+        ));
+        recurrencePanel.add(occurrencesSpinner, gbcRecur);
+        
+        // End date
+        gbcRecur.gridy++;
+        gbcRecur.insets = new Insets(5, 0, 5, 0);
+        JLabel endDateLabel = new JLabel("End Date (Optional)");
+        endDateLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        recurrencePanel.add(endDateLabel, gbcRecur);
+        
+        gbcRecur.gridy++;
+        gbcRecur.insets = new Insets(0, 0, 5, 0);
+        
+        SpinnerDateModel endDateModel = new SpinnerDateModel();
+        recurrenceEndDateSpinner = new JSpinner(endDateModel);
+        JSpinner.DateEditor endDateEditor = new JSpinner.DateEditor(recurrenceEndDateSpinner, "dd/MM/yyyy");
+        recurrenceEndDateSpinner.setEditor(endDateEditor);
+        recurrenceEndDateSpinner.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        recurrenceEndDateSpinner.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(BORDER_COLOR),
+            BorderFactory.createEmptyBorder(8, 10, 8, 10)
+        ));
+        
+        // Set default end date to 3 months from now
+        Calendar endCal = Calendar.getInstance();
+        endCal.add(Calendar.MONTH, 3);
+        recurrenceEndDateSpinner.setValue(endCal.getTime());
+        
+        recurrencePanel.add(recurrenceEndDateSpinner, gbcRecur);
+        
+        // Add the recurrence panel to the form
+        gbc.gridy++;
+        gbc.insets = new Insets(0, 0, 15, 0);
+        formPanel.add(recurrencePanel, gbc);
+        
+        // Initially hide recurrence controls
+        recurrencePanel.setVisible(false);
         
         gbc.gridy++;
         gbc.insets = new Insets(5, 0, 10, 0);
@@ -1495,8 +1654,8 @@ public class TaskFrame extends JFrame {
         rightSplitPane.setTopComponent(descriptionPanel);
         rightSplitPane.setBottomComponent(subtasksContainer);
         
-        // Add panels to horizontal split pane
-        horizontalSplitPane.setLeftComponent(formPanel);
+        // Add panels to horizontal split pane - MODIFIÉ: Utiliser formScrollPane au lieu de formPanel
+        horizontalSplitPane.setLeftComponent(formScrollPane);
         horizontalSplitPane.setRightComponent(rightSplitPane);
         
         panel.add(headerPanel, BorderLayout.NORTH);
@@ -2312,6 +2471,38 @@ public class TaskFrame extends JFrame {
             dueDateSpinner.setValue(new Date());
         }
         
+        // Set recurrence properties
+        isRecurringCheckBox.setSelected(task.isRecurring());
+        toggleRecurrenceControls();
+        
+        if (task.isRecurring()) {
+            // Set recurrence type
+            String recurrenceType = task.getRecurrenceType();
+            if (recurrenceType != null) {
+                for (int i = 0; i < recurrenceTypeComboBox.getItemCount(); i++) {
+                    String type = recurrenceTypeComboBox.getItemAt(i);
+                    if (recurrenceType.equalsIgnoreCase(type)) {
+                        recurrenceTypeComboBox.setSelectedIndex(i);
+                        break;
+                    }
+                }
+            }
+            
+            // Set recurrence interval
+            recurrenceIntervalSpinner.setValue(task.getRecurrenceInterval() > 0 ? 
+                task.getRecurrenceInterval() : 1);
+            
+            // Set recurrence end date if available
+            if (task.getRecurrenceEndDate() != null) {
+                recurrenceEndDateSpinner.setValue(task.getRecurrenceEndDate());
+            } else {
+                // Default to 3 months in the future
+                Calendar endCal = Calendar.getInstance();
+                endCal.add(Calendar.MONTH, 3);
+                recurrenceEndDateSpinner.setValue(endCal.getTime());
+            }
+        }
+        
         // Set category
         if (task.getCategory() != null) {
             for (int i = 0; i < categoryComboBox.getItemCount(); i++) {
@@ -2713,6 +2904,15 @@ public class TaskFrame extends JFrame {
         taskList.clearSelection();
         deleteButton.setEnabled(false);
         
+        // Clear recurrence settings
+        isRecurringCheckBox.setSelected(false);
+        recurrenceTypeComboBox.setSelectedIndex(0);
+        recurrenceIntervalSpinner.setValue(1);
+        Calendar endCal = Calendar.getInstance();
+        endCal.add(Calendar.MONTH, 3);
+        recurrenceEndDateSpinner.setValue(endCal.getTime());
+        toggleRecurrenceControls();
+        
         // Clear subtasks
         currentSubTasks.clear();
         updateSubTasksPanel();
@@ -2765,6 +2965,12 @@ public class TaskFrame extends JFrame {
         Date dueDate = (Date) dueDateSpinner.getValue();
         Category selectedCategory = (Category) categoryComboBox.getSelectedItem();
 
+        // Get recurrence settings
+        boolean isRecurring = isRecurringCheckBox.isSelected();
+        String recurrenceType = isRecurring ? (String) recurrenceTypeComboBox.getSelectedItem() : null;
+        int recurrenceInterval = isRecurring ? (int) recurrenceIntervalSpinner.getValue() : 0;
+        Date recurrenceEndDate = isRecurring ? (Date) recurrenceEndDateSpinner.getValue() : null;
+
         if (title.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Title cannot be empty!", "Invalid Input", JOptionPane.WARNING_MESSAGE);
             return;
@@ -2772,9 +2978,30 @@ public class TaskFrame extends JFrame {
 
         boolean success;
         if (selectedCategory != null && selectedCategory.getId() != 0) {
-            success = TaskController.updateTask(selectedTask.getTaskId(), title, description, status, dueDate, selectedCategory);
+            success = TaskController.updateTask(
+                selectedTask.getTaskId(), 
+                title, 
+                description, 
+                status, 
+                dueDate, 
+                selectedCategory,
+                isRecurring,
+                recurrenceType,
+                recurrenceInterval,
+                recurrenceEndDate
+            );
         } else {
-            success = TaskController.updateTask(selectedTask.getTaskId(), title, description, status, dueDate);
+            success = TaskController.updateTask(
+                selectedTask.getTaskId(), 
+                title, 
+                description, 
+                status, 
+                dueDate,
+                isRecurring,
+                recurrenceType,
+                recurrenceInterval,
+                recurrenceEndDate
+            );
         }
         
         if (success) {
@@ -2828,6 +3055,12 @@ public class TaskFrame extends JFrame {
         Date dueDate = (Date) dueDateSpinner.getValue();
         Category selectedCategory = (Category) categoryComboBox.getSelectedItem();
         
+        // Get recurrence settings
+        boolean isRecurring = isRecurringCheckBox.isSelected();
+        String recurrenceType = isRecurring ? (String) recurrenceTypeComboBox.getSelectedItem() : null;
+        int recurrenceInterval = isRecurring ? (int) recurrenceIntervalSpinner.getValue() : 0;
+        Date recurrenceEndDate = isRecurring ? (Date) recurrenceEndDateSpinner.getValue() : null;
+        
         if (title.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Title cannot be empty!", "Invalid Input", JOptionPane.WARNING_MESSAGE);
             return;
@@ -2835,9 +3068,30 @@ public class TaskFrame extends JFrame {
         
         boolean success;
         if (selectedCategory != null && selectedCategory.getId() != 0) {
-            success = TaskController.createTask(userId, title, description, status, dueDate, selectedCategory);
+            success = TaskController.createTask(
+                userId, 
+                title, 
+                description, 
+                status, 
+                dueDate, 
+                selectedCategory,
+                isRecurring,
+                recurrenceType,
+                recurrenceInterval,
+                recurrenceEndDate
+            );
         } else {
-            success = TaskController.createTask(userId, title, description, status, dueDate);
+            success = TaskController.createTask(
+                userId, 
+                title, 
+                description, 
+                status, 
+                dueDate,
+                isRecurring,
+                recurrenceType,
+                recurrenceInterval,
+                recurrenceEndDate
+            );
         }
         
         if (success) {
@@ -3870,6 +4124,15 @@ public class TaskFrame extends JFrame {
                 return 6;
             }
         };
+    }
+
+    /**
+     * Toggles the visibility of recurrence controls based on checkbox state
+     */
+    private void toggleRecurrenceControls() {
+        recurrencePanel.setVisible(isRecurringCheckBox.isSelected());
+        revalidate();
+        repaint();
     }
 }
         
