@@ -138,7 +138,8 @@ CREATE TABLE `tasks` (
   `category_id` int(11) DEFAULT NULL,
   `is_recurring` tinyint(1) DEFAULT 0,
   `recurring_pattern_id` int(11) DEFAULT NULL,
-  `parent_task_id` int(11) DEFAULT NULL
+  `parent_task_id` int(11) DEFAULT NULL,
+  `priority` varchar(20) DEFAULT 'NORMAL'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -174,6 +175,9 @@ INSERT INTO `users` (`user_id`, `username`, `password_hash`, `created_at`) VALUE
 (2, 'aaaaaa', 'am', '2025-04-04 15:15:58'),
 (3, 'uuu', 'uuu', '2025-04-04 17:55:31'),
 (4, 'az', 'a', '2025-04-04 17:59:50');
+
+-- --------------------------------------------------------
+
 
 --
 -- Indexes for dumped tables

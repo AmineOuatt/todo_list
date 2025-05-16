@@ -45,12 +45,25 @@ public class UserDAO {
     // Method to create a new user
     public static boolean createUser(String username, String password) {
         try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(
-                     "INSERT INTO Users (username, password_hash) VALUES (?, ?)")) {
-
-            stmt.setString(1, username);
-            stmt.setString(2, password); // Hash password if needed
-            int rowsInserted = stmt.executeUpdate();
+             // Vérifier d'abord si l'utilisateur existe déjà
+             PreparedStatement checkStmt = conn.prepareStatement("SELECT COUNT(*) FROM users WHERE username = ?")) {
+            
+            checkStmt.setString(1, username);
+            ResultSet rs = checkStmt.executeQuery();
+            
+            if (rs.next() && rs.getInt(1) > 0) {
+                System.out.println("Username already exists: " + username);
+                return false;
+            }
+            
+            // Si l'utilisateur n'existe pas, l'insérer
+            PreparedStatement insertStmt = conn.prepareStatement(
+                    "INSERT INTO users (username, password_hash) VALUES (?, ?)");
+            insertStmt.setString(1, username);
+            insertStmt.setString(2, password); // Hash password if needed
+            int rowsInserted = insertStmt.executeUpdate();
+            insertStmt.close();
+            
             return rowsInserted > 0;
         } catch (SQLException e) {
             System.out.println("Error creating user: " + e.getMessage());

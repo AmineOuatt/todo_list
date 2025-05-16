@@ -49,6 +49,11 @@ public class TaskDAO {
                 
                 task.setCategory(category);
                 
+                // Récupération de la priorité
+                if (rs.getString("priority") != null) {
+                    task.setPriority(rs.getString("priority"));
+                }
+                
                 // Handle recurring task properties
                 boolean isRecurring = rs.getBoolean("is_recurring");
                 task.setRecurring(isRecurring);
@@ -120,6 +125,11 @@ public class TaskDAO {
                 );
                 
                 task.setCategory(category);
+                
+                // Récupération de la priorité
+                if (rs.getString("priority") != null) {
+                    task.setPriority(rs.getString("priority"));
+                }
                 
                 // Handle recurring task properties
                 boolean isRecurring = rs.getBoolean("is_recurring");
@@ -209,7 +219,7 @@ public class TaskDAO {
             }
             
             // Now insert the task
-            String taskQuery = "INSERT INTO Tasks (user_id, title, description, due_date, status, category_id, is_recurring, recurring_pattern_id, parent_task_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            String taskQuery = "INSERT INTO Tasks (user_id, title, description, due_date, status, category_id, is_recurring, recurring_pattern_id, parent_task_id, priority) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
             stmtTask = conn.prepareStatement(taskQuery);
             stmtTask.setInt(1, task.getUserId());
             stmtTask.setString(2, task.getTitle());
@@ -242,6 +252,9 @@ public class TaskDAO {
             } else {
                 stmtTask.setNull(9, java.sql.Types.INTEGER);
             }
+            
+            // Ajout de la priorité
+            stmtTask.setString(10, task.getPriority());
 
             int taskResult = stmtTask.executeUpdate();
             
@@ -386,7 +399,7 @@ public class TaskDAO {
             
             // Update the task
             String taskQuery = "UPDATE Tasks SET title = ?, description = ?, due_date = ?, status = ?, " +
-                               "category_id = ?, is_recurring = ?, recurring_pattern_id = ?, parent_task_id = ? " +
+                               "category_id = ?, is_recurring = ?, recurring_pattern_id = ?, parent_task_id = ?, priority = ? " +
                                "WHERE task_id = ?";
             
             stmtTask = conn.prepareStatement(taskQuery);
@@ -421,7 +434,10 @@ public class TaskDAO {
                 stmtTask.setNull(8, java.sql.Types.INTEGER);
             }
             
-            stmtTask.setInt(9, task.getTaskId());
+            // Ajout de la priorité
+            stmtTask.setString(9, task.getPriority());
+            
+            stmtTask.setInt(10, task.getTaskId());
             
             int taskResult = stmtTask.executeUpdate();
             
@@ -521,6 +537,11 @@ public class TaskDAO {
                 );
                 
                 task.setCategory(category);
+                
+                // Récupération de la priorité
+                if (rs.getString("priority") != null) {
+                    task.setPriority(rs.getString("priority"));
+                }
                 
                 // Handle recurring task properties
                 boolean isRecurring = rs.getBoolean("is_recurring");
@@ -834,6 +855,7 @@ public class TaskDAO {
         occurrenceTask.setRecurrenceInterval(baseTask.getRecurrenceInterval());
         occurrenceTask.setRecurrenceEndDate(baseTask.getRecurrenceEndDate());
         occurrenceTask.setParentTaskId(baseTask.getTaskId());
+        occurrenceTask.setPriority(baseTask.getPriority()); // Copier la priorité
         
         return occurrenceTask;
     }

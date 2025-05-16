@@ -21,6 +21,7 @@ public class Task {
     private Integer dayOfWeek;
     private Integer dayOfMonth;
     private Integer monthOfYear;
+    private String priority;
 
     public Task(int taskId, int userId, String title, String description, Timestamp dueDateTime, String status) {
         this.taskId = taskId;
@@ -40,6 +41,7 @@ public class Task {
         this.dayOfWeek = null;
         this.dayOfMonth = null;
         this.monthOfYear = null;
+        this.priority = "NORMAL";
     }
     
     public Task(int taskId, int userId, String title, String description, Date dueDate, String status) {
@@ -66,6 +68,7 @@ public class Task {
         this.dayOfWeek = null;
         this.dayOfMonth = null;
         this.monthOfYear = null;
+        this.priority = "NORMAL";
     }
     
     public Task(int taskId, int userId, String title, String description, Date dueDate, String status, Category category) {
@@ -94,6 +97,7 @@ public class Task {
         this.dayOfWeek = null;
         this.dayOfMonth = null;
         this.monthOfYear = null;
+        this.priority = "NORMAL";
     }
     
     public Task(int taskId, int userId, String title, String description, Date dueDate, String status, 
@@ -251,5 +255,13 @@ public class Task {
     
     public void setMonthOfYear(Integer monthOfYear) {
         this.monthOfYear = monthOfYear;
+    }
+
+    public String getPriority() {
+        return priority;
+    }
+    
+    public void setPriority(String priority) {
+        this.priority = priority;
     }
 }

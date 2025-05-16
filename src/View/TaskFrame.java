@@ -25,6 +25,7 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Collections;
 
 import javax.swing.BorderFactory;
 import javax.swing.Box;
@@ -77,6 +78,7 @@ public class TaskFrame extends JFrame {
     private JTextField titleField;
     private JTextArea descriptionField;
     private JComboBox<String> statusComboBox;
+    private JComboBox<String> priorityComboBox;  // Ajout du champ priorité
     private JSpinner dueDateSpinner;
     private JComboBox<Category> categoryComboBox;
     private JTextField newCategoryField;
@@ -110,6 +112,12 @@ public class TaskFrame extends JFrame {
     // Define consistent task status colors
     private static final Color IN_PROGRESS_COLOR = PENDING_COLOR;         // Orange for "In Progress"
     private static final Color PENDING_STATUS_COLOR = new Color(149, 149, 149); // Gray for "Pending"
+    
+    // Couleurs pour les niveaux de priorité
+    private static final Color URGENT_PRIORITY_COLOR = new Color(255, 59, 48);  // Rouge vif
+    private static final Color HIGH_PRIORITY_COLOR = new Color(255, 149, 0);    // Orange
+    private static final Color NORMAL_PRIORITY_COLOR = new Color(0, 122, 255);  // Bleu
+    private static final Color LOW_PRIORITY_COLOR = new Color(142, 142, 147);   // Gris
 
     // Custom calendar component
     private JPanel calendarPanel;
@@ -192,8 +200,23 @@ public class TaskFrame extends JFrame {
                 
                 JPanel panel = new JPanel();
                 panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+                
+                // Déterminer une bordure basée sur la priorité
+                Color borderColor = BORDER_COLOR;
+                int borderThickness = 1;
+                
+                if (task.getPriority() != null) {
+                    if ("URGENT".equals(task.getPriority())) {
+                        borderColor = URGENT_PRIORITY_COLOR;
+                        borderThickness = 2;
+                    } else if ("HIGH".equals(task.getPriority())) {
+                        borderColor = HIGH_PRIORITY_COLOR;
+                        borderThickness = 2;
+                    }
+                }
+                
                 panel.setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createMatteBorder(0, 0, 1, 0, BORDER_COLOR),
+                    BorderFactory.createMatteBorder(0, borderThickness, 1, 0, borderColor),
                     BorderFactory.createEmptyBorder(15, 10, 15, 10)
                 ));
                 
@@ -212,6 +235,10 @@ public class TaskFrame extends JFrame {
                 JLabel statusIcon = new JLabel(createStatusIcon(task.getStatus()));
                 titlePanel.add(statusIcon, BorderLayout.WEST);
                 
+                // Title with priority indicator if needed
+                JPanel titleWithPriorityPanel = new JPanel(new BorderLayout(5, 0));
+                titleWithPriorityPanel.setBackground(titlePanel.getBackground());
+                
                 // Title
                 JLabel titleLabel = new JLabel(task.getTitle());
                 titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
@@ -223,10 +250,26 @@ public class TaskFrame extends JFrame {
                     // Add strikethrough for completed tasks
                     titleLabel.setText("<html><strike>" + task.getTitle() + "</strike></html>");
                 } else {
-                    titleLabel.setForeground(TEXT_COLOR);
+                    // Colorer le titre selon la priorité
+                    if (task.getPriority() != null) {
+                        if ("URGENT".equals(task.getPriority())) {
+                            titleLabel.setForeground(URGENT_PRIORITY_COLOR);
+                        } else if ("HIGH".equals(task.getPriority())) {
+                            titleLabel.setForeground(HIGH_PRIORITY_COLOR);
+                        } else {
+                            titleLabel.setForeground(TEXT_COLOR);
+                        }
+                    } else {
+                        titleLabel.setForeground(TEXT_COLOR);
+                    }
                 }
-                titlePanel.add(titleLabel, BorderLayout.CENTER);
+                titleWithPriorityPanel.add(titleLabel, BorderLayout.CENTER);
                 
+                // Ajouter l'indicateur de priorité
+                JLabel priorityIcon = new JLabel(createPriorityIcon(task.getPriority()));
+                titleWithPriorityPanel.add(priorityIcon, BorderLayout.EAST);
+                
+                titlePanel.add(titleWithPriorityPanel, BorderLayout.CENTER);
                 panel.add(titlePanel);
                 
                 // Add some space
@@ -266,8 +309,7 @@ public class TaskFrame extends JFrame {
                 } else if ("Pending".equals(task.getStatus())) {
                     statusColor = PENDING_STATUS_COLOR;
                 }
-                statusLabel.setForeground(statusColor);
-                leftMeta.add(statusLabel);
+                                statusLabel.setForeground(statusColor);                leftMeta.add(statusLabel);                                // Ajout de l'affichage textuel de la priorité                if (task.getPriority() != null) {                    JPanel priorityPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));                    priorityPanel.setBackground(leftMeta.getBackground());                                        // Créer une icône de bulle pour la priorité                    JLabel bulletIcon = new JLabel(createBulletIcon());                    priorityPanel.add(bulletIcon);                                        JLabel priorityLabel = new JLabel(task.getPriority());                    priorityLabel.setFont(new Font("Segoe UI", Font.PLAIN, 11));                                        // Définir la couleur en fonction de la priorité                    Color priorityColor = NORMAL_PRIORITY_COLOR; // Par défaut                    String priority = task.getPriority();                    if ("URGENT".equals(priority)) {                        priorityColor = URGENT_PRIORITY_COLOR;                    } else if ("HIGH".equals(priority)) {                        priorityColor = HIGH_PRIORITY_COLOR;                    } else if ("NORMAL".equals(priority)) {                        priorityColor = NORMAL_PRIORITY_COLOR;                    } else if ("LOW".equals(priority)) {                        priorityColor = LOW_PRIORITY_COLOR;                    }                                        priorityLabel.setForeground(priorityColor);                    priorityPanel.add(priorityLabel);                                        leftMeta.add(priorityPanel);                }
                 
                 // Category if available
                 if (task.getCategory() != null) {
@@ -1329,6 +1371,62 @@ public class TaskFrame extends JFrame {
         
         formPanel.add(statusComboBox, gbc);
         
+        // Ajout du champ de priorité
+        gbc.gridy++;
+        gbc.insets = new Insets(15, 0, 10, 0);
+        JLabel priorityLabel = new JLabel("Priority");
+        priorityLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        formPanel.add(priorityLabel, gbc);
+        
+        gbc.gridy++;
+        gbc.insets = new Insets(0, 0, 15, 0);
+        String[] priorities = {"NORMAL", "URGENT", "HIGH", "LOW"};
+        priorityComboBox = new JComboBox<>(priorities);
+        priorityComboBox.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        priorityComboBox.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(BORDER_COLOR),
+            BorderFactory.createEmptyBorder(8, 10, 8, 10)
+        ));
+        
+        // Add a custom renderer for the priority dropdown
+        priorityComboBox.setRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value, int index, 
+                    boolean isSelected, boolean cellHasFocus) {
+                JPanel panel = new JPanel(new BorderLayout(10, 0));
+                
+                if (isSelected) {
+                    panel.setBackground(HOVER_COLOR);
+                } else {
+                    panel.setBackground(list.getBackground());
+                }
+                
+                String priority = (String) value;
+                JLabel priorityIcon = new JLabel(createPriorityIcon(priority));
+                panel.add(priorityIcon, BorderLayout.WEST);
+                
+                JLabel textLabel = new JLabel(priority);
+                textLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+                
+                // Set color based on priority
+                Color textColor = NORMAL_PRIORITY_COLOR;
+                if ("URGENT".equals(priority)) {
+                    textColor = URGENT_PRIORITY_COLOR;
+                } else if ("HIGH".equals(priority)) {
+                    textColor = HIGH_PRIORITY_COLOR;
+                } else if ("LOW".equals(priority)) {
+                    textColor = LOW_PRIORITY_COLOR;
+                }
+                textLabel.setForeground(textColor);
+                
+                panel.add(textLabel, BorderLayout.CENTER);
+                
+                return panel;
+            }
+        });
+        
+        formPanel.add(priorityComboBox, gbc);
+        
         gbc.gridy++;
         gbc.insets = new Insets(5, 0, 10, 0);
         
@@ -2328,6 +2426,26 @@ public class TaskFrame extends JFrame {
             // Get fresh data from the database - using normal tasks without occurrences for list view
             List<Task> tasks = TaskController.getTasks(userId);
             
+            // Tri des tâches selon la priorité et le statut
+            Collections.sort(tasks, (t1, t2) -> {
+                // D'abord, comparer les statuts (Pending et In Progress avant Completed)
+                boolean t1Completed = "Completed".equalsIgnoreCase(t1.getStatus());
+                boolean t2Completed = "Completed".equalsIgnoreCase(t2.getStatus());
+                
+                if (t1Completed && !t2Completed) return 1;
+                if (!t1Completed && t2Completed) return -1;
+                
+                // Ensuite, si les statuts sont équivalents, comparer les priorités
+                String p1 = t1.getPriority() != null ? t1.getPriority() : "NORMAL";
+                String p2 = t2.getPriority() != null ? t2.getPriority() : "NORMAL";
+                
+                // Ordre de priorité: URGENT > HIGH > NORMAL > LOW
+                int p1Value = getPriorityValue(p1);
+                int p2Value = getPriorityValue(p2);
+                
+                return Integer.compare(p1Value, p2Value);
+            });
+            
             // Add each task to the list model
             for (Task task : tasks) {
                 taskListModel.addElement(task);
@@ -2339,6 +2457,17 @@ public class TaskFrame extends JFrame {
             }
         } catch (Exception e) {
             System.out.println("Error loading tasks: " + e.getMessage());
+        }
+    }
+    
+    // Méthode d'aide pour attribuer une valeur numérique à chaque priorité pour le tri
+    private int getPriorityValue(String priority) {
+        switch (priority) {
+            case "URGENT": return 1;
+            case "HIGH": return 2;
+            case "NORMAL": return 3;
+            case "LOW": return 4;
+            default: return 3; // Valeur par défaut pour NORMAL
         }
     }
 
@@ -2579,9 +2708,7 @@ public class TaskFrame extends JFrame {
             categoryComboBox.setSelectedIndex(0);
         }
         
-        // Set the current subtasks
-        currentSubTasks = SubTaskController.getSubTasksByTaskId(task.getTaskId());
-        updateSubTasksPanel();
+                // Set priority if available        if (task.getPriority() != null) {            for (int i = 0; i < priorityComboBox.getItemCount(); i++) {                String priority = priorityComboBox.getItemAt(i);                if (task.getPriority().equals(priority)) {                    priorityComboBox.setSelectedIndex(i);                    break;                }            }        } else {            // Default to NORMAL priority            for (int i = 0; i < priorityComboBox.getItemCount(); i++) {                if ("NORMAL".equals(priorityComboBox.getItemAt(i))) {                    priorityComboBox.setSelectedIndex(i);                    break;                }            }        }                // Set the current subtasks        currentSubTasks = SubTaskController.getSubTasksByTaskId(task.getTaskId());        updateSubTasksPanel();
         
         // Enable delete button since a task is selected
         deleteButton.setEnabled(true);
@@ -2792,10 +2919,15 @@ public class TaskFrame extends JFrame {
                         taskPanel.setBorder(BorderFactory.createEmptyBorder(1, 0, 1, 0));
                         taskPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 25));
                         
-                        // Determine color based on status - using case-insensitive comparison for reliability
+                        // Determine color based on status and priority
                         Color taskColor;
                         String status = task.getStatus() != null ? task.getStatus().toLowerCase() : "";
-                        if (status.contains("completed") || status.equals("done")) {
+                        String priority = task.getPriority();
+                        
+                        // Priorité élevée (URGENT ou HIGH) a préséance sur le statut pour la couleur
+                        if (priority != null && ("URGENT".equals(priority) || "HIGH".equals(priority))) {
+                            taskColor = "URGENT".equals(priority) ? URGENT_PRIORITY_COLOR : HIGH_PRIORITY_COLOR;
+                        } else if (status.contains("completed") || status.equals("done")) {
                             taskColor = COMPLETED_COLOR; // Green
                         } else if (status.contains("pending") || status.equals("waiting")) {
                             taskColor = PENDING_STATUS_COLOR; // Gray
@@ -2810,11 +2942,23 @@ public class TaskFrame extends JFrame {
                         colorBar.setBackground(taskColor);
                         colorBar.setPreferredSize(new Dimension(3, 0));
                         
-                        // Create the task label
+                        // Create the task label with priority indicator
+                        JPanel labelPanel = new JPanel(new BorderLayout(5, 0));
+                        labelPanel.setBackground(taskPanel.getBackground());
+                        
                         JLabel taskLabel = new JLabel(task.getTitle());
                         taskLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
                         taskLabel.setForeground(TEXT_COLOR);
                         taskLabel.setBorder(BorderFactory.createEmptyBorder(2, 5, 2, 5));
+                        
+                        // Ajouter l'indicateur de priorité si présent
+                        if (priority != null && !"NORMAL".equals(priority)) {
+                            JLabel priorityLabel = new JLabel();
+                            priorityLabel.setIcon(createPriorityIcon(priority));
+                            labelPanel.add(priorityLabel, BorderLayout.EAST);
+                        }
+                        
+                        labelPanel.add(taskLabel, BorderLayout.CENTER);
                         
                         // Add a background color based on status (with transparency)
                         Color bgColor = new Color(
@@ -2826,7 +2970,7 @@ public class TaskFrame extends JFrame {
                         
                         // Add components to task panel
                         taskPanel.add(colorBar, BorderLayout.WEST);
-                        taskPanel.add(taskLabel, BorderLayout.CENTER);
+                        taskPanel.add(labelPanel, BorderLayout.CENTER);
                         
                         // Make task panel clickable to view task details
                         final Task finalTask = task;
@@ -2952,10 +3096,7 @@ public class TaskFrame extends JFrame {
     private void clearFields() {
         titleField.setText("");
         descriptionField.setText("");
-        statusComboBox.setSelectedIndex(0);
-        dueDateSpinner.setValue(new Date());
-        categoryComboBox.setSelectedIndex(0);
-        newCategoryField.setText("");
+                statusComboBox.setSelectedIndex(0);        // Réinitialiser la priorité à NORMAL        for (int i = 0; i < priorityComboBox.getItemCount(); i++) {            if ("NORMAL".equals(priorityComboBox.getItemAt(i))) {                priorityComboBox.setSelectedIndex(i);                break;            }        }        dueDateSpinner.setValue(new Date());        categoryComboBox.setSelectedIndex(0);        newCategoryField.setText("");
         taskList.clearSelection();
         deleteButton.setEnabled(false);
         
@@ -3007,18 +3148,7 @@ public class TaskFrame extends JFrame {
     /**
      * Handles updating an existing task
      */
-    private void handleUpdateTask() {
-        Task selectedTask = taskList.getSelectedValue();
-        if (selectedTask == null) {
-            JOptionPane.showMessageDialog(this, "No task selected!", "Warning", JOptionPane.WARNING_MESSAGE);
-                return;
-            }
-            
-        String title = titleField.getText().trim();
-        String description = descriptionField.getText().trim();
-        String status = (String) statusComboBox.getSelectedItem();
-        Date dueDate = (Date) dueDateSpinner.getValue();
-        Category selectedCategory = (Category) categoryComboBox.getSelectedItem();
+        private void handleUpdateTask() {        Task selectedTask = taskList.getSelectedValue();        if (selectedTask == null) {            JOptionPane.showMessageDialog(this, "No task selected!", "Warning", JOptionPane.WARNING_MESSAGE);                return;            }                    String title = titleField.getText().trim();        String description = descriptionField.getText().trim();        String status = (String) statusComboBox.getSelectedItem();        String priority = (String) priorityComboBox.getSelectedItem();        Date dueDate = (Date) dueDateSpinner.getValue();        Category selectedCategory = (Category) categoryComboBox.getSelectedItem();
 
         // Get recurrence settings
         boolean isRecurring = isRecurringCheckBox.isSelected();
@@ -3033,30 +3163,9 @@ public class TaskFrame extends JFrame {
 
         boolean success;
         if (selectedCategory != null && selectedCategory.getId() != 0) {
-            success = TaskController.updateTask(
-                selectedTask.getTaskId(), 
-                title, 
-                description, 
-                status, 
-                dueDate, 
-                selectedCategory,
-                isRecurring,
-                recurrenceType,
-                recurrenceInterval,
-                recurrenceEndDate
-            );
+                        success = TaskController.updateTask(                selectedTask.getTaskId(),                 title,                 description,                 status,                 dueDate,                 selectedCategory,                isRecurring,                recurrenceType,                recurrenceInterval,                recurrenceEndDate,                priority            );
         } else {
-            success = TaskController.updateTask(
-                selectedTask.getTaskId(), 
-                title, 
-                description, 
-                status, 
-                dueDate,
-                isRecurring,
-                recurrenceType,
-                recurrenceInterval,
-                recurrenceEndDate
-            );
+                        success = TaskController.updateTask(                selectedTask.getTaskId(),                 title,                 description,                 status,                 dueDate,                isRecurring,                recurrenceType,                recurrenceInterval,                recurrenceEndDate,                priority            );
         }
         
         if (success) {
@@ -3103,12 +3212,7 @@ public class TaskFrame extends JFrame {
     /**
      * Handles adding a new task
      */
-    private void handleAddTask() {
-        String title = titleField.getText().trim();
-        String description = descriptionField.getText().trim();
-        String status = (String) statusComboBox.getSelectedItem();
-        Date dueDate = (Date) dueDateSpinner.getValue();
-        Category selectedCategory = (Category) categoryComboBox.getSelectedItem();
+        private void handleAddTask() {        String title = titleField.getText().trim();        String description = descriptionField.getText().trim();        String status = (String) statusComboBox.getSelectedItem();        String priority = (String) priorityComboBox.getSelectedItem();        Date dueDate = (Date) dueDateSpinner.getValue();        Category selectedCategory = (Category) categoryComboBox.getSelectedItem();
         
         // Get recurrence settings
         boolean isRecurring = isRecurringCheckBox.isSelected();
@@ -3146,38 +3250,9 @@ public class TaskFrame extends JFrame {
         
         boolean success;
         if (selectedCategory != null && selectedCategory.getId() != 0) {
-            success = TaskController.createTask(
-                userId, 
-                title, 
-                description, 
-                status, 
-                dueDate, 
-                selectedCategory,
-                isRecurring,
-                recurrenceType,
-                recurrenceInterval,
-                recurrenceEndDate,
-                maxOccurrences,
-                dayOfWeek,
-                dayOfMonth,
-                monthOfYear
-            );
+                        success = TaskController.createTask(                userId,                 title,                 description,                 status,                 dueDate,                 selectedCategory,                isRecurring,                recurrenceType,                recurrenceInterval,                recurrenceEndDate,                maxOccurrences,                dayOfWeek,                dayOfMonth,                monthOfYear,                priority            );
         } else {
-            success = TaskController.createTask(
-                userId, 
-                title, 
-                description, 
-                status, 
-                dueDate,
-                isRecurring,
-                recurrenceType,
-                recurrenceInterval,
-                recurrenceEndDate,
-                maxOccurrences,
-                dayOfWeek,
-                dayOfMonth,
-                monthOfYear
-            );
+                        success = TaskController.createTask(                userId,                 title,                 description,                 status,                 dueDate,                isRecurring,                recurrenceType,                recurrenceInterval,                recurrenceEndDate,                maxOccurrences,                dayOfWeek,                dayOfMonth,                monthOfYear,                priority            );
         }
         
         if (success) {
@@ -4208,6 +4283,49 @@ public class TaskFrame extends JFrame {
             @Override
             public int getIconHeight() {
                 return 6;
+            }
+        };
+    }
+    
+    // Méthode pour créer une icône représentant le niveau de priorité
+    private Icon createPriorityIcon(String priority) {
+        return new Icon() {
+            @Override
+            public void paintIcon(Component c, Graphics g, int x, int y) {
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                
+                // Déterminer la couleur en fonction de la priorité
+                Color color = NORMAL_PRIORITY_COLOR; // Couleur par défaut
+                if (priority != null) {
+                    if ("URGENT".equals(priority)) {
+                        color = URGENT_PRIORITY_COLOR;
+                    } else if ("HIGH".equals(priority)) {
+                        color = HIGH_PRIORITY_COLOR;
+                    } else if ("NORMAL".equals(priority)) {
+                        color = NORMAL_PRIORITY_COLOR;
+                    } else if ("LOW".equals(priority)) {
+                        color = LOW_PRIORITY_COLOR;
+                    }
+                }
+                
+                // Dessiner un drapeau ou fanion pour la priorité
+                g2d.setColor(color);
+                int[] xPoints = {x, x + 10, x + 10, x};
+                int[] yPoints = {y, y, y + 5, y + 10};
+                g2d.fillPolygon(xPoints, yPoints, 4);
+                
+                g2d.dispose();
+            }
+            
+            @Override
+            public int getIconWidth() {
+                return 12;
+            }
+            
+            @Override
+            public int getIconHeight() {
+                return 12;
             }
         };
     }
