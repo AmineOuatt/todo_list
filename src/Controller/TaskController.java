@@ -24,6 +24,15 @@ public class TaskController {
         return TaskDAO.getTasksByUserId(userId);
     }
 
+    /**
+     * Get all tasks for a user including generated occurrences of recurring tasks
+     * @param userId The ID of the user
+     * @return List of tasks for the user including recurring occurrences
+     */
+    public static List<Task> getTasksWithOccurrences(int userId) {
+        return TaskDAO.getTasksWithOccurrences(userId);
+    }
+
     // Get tasks filtered by date range
     public static List<Task> getTasksByDateRange(int userId, Date fromDate, Date toDate) {
         List<Task> allTasks = TaskDAO.getTasksByUserId(userId);
@@ -145,26 +154,36 @@ public class TaskController {
 
     // Create a new recurring task (without category)
     public static boolean createTask(int userId, String title, String description, String status, Date dueDate,
-                                    boolean isRecurring, String recurrenceType, int recurrenceInterval, Date recurrenceEndDate) {
+                                    boolean isRecurring, String recurrenceType, int recurrenceInterval, Date recurrenceEndDate, 
+                                    Integer maxOccurrences, Integer dayOfWeek, Integer dayOfMonth, Integer monthOfYear) {
         Task task = new Task(0, userId, title, description, dueDate, status);
         task.setRecurring(isRecurring);
         if (isRecurring) {
             task.setRecurrenceType(recurrenceType);
             task.setRecurrenceInterval(recurrenceInterval);
             task.setRecurrenceEndDate(recurrenceEndDate);
+            task.setMaxOccurrences(maxOccurrences);
+            task.setDayOfWeek(dayOfWeek);
+            task.setDayOfMonth(dayOfMonth);
+            task.setMonthOfYear(monthOfYear);
         }
         return TaskDAO.insertTask(task);
     }
     
     // Create a new recurring task (with category)
     public static boolean createTask(int userId, String title, String description, String status, Date dueDate, Category category,
-                                    boolean isRecurring, String recurrenceType, int recurrenceInterval, Date recurrenceEndDate) {
+                                    boolean isRecurring, String recurrenceType, int recurrenceInterval, Date recurrenceEndDate, 
+                                    Integer maxOccurrences, Integer dayOfWeek, Integer dayOfMonth, Integer monthOfYear) {
         Task task = new Task(0, userId, title, description, dueDate, status, category);
         task.setRecurring(isRecurring);
         if (isRecurring) {
             task.setRecurrenceType(recurrenceType);
             task.setRecurrenceInterval(recurrenceInterval);
             task.setRecurrenceEndDate(recurrenceEndDate);
+            task.setMaxOccurrences(maxOccurrences);
+            task.setDayOfWeek(dayOfWeek);
+            task.setDayOfMonth(dayOfMonth);
+            task.setMonthOfYear(monthOfYear);
         }
         return TaskDAO.insertTask(task);
     }

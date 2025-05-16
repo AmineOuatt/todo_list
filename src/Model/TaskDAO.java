@@ -5,6 +5,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -42,7 +43,7 @@ public class TaskDAO {
                     rs.getInt("user_id"),
                     rs.getString("title"),
                     rs.getString("description"),
-                    rs.getDate("due_date"),
+                    rs.getTimestamp("due_date"),
                     rs.getString("status")
                 );
                 
@@ -69,12 +70,19 @@ public class TaskDAO {
                 tasks.add(task);
             }
             
-            // Add generated occurrences of recurring tasks
-            tasks.addAll(generateRecurringTaskOccurrences(tasks));
+            // Ne plus ajouter automatiquement les occurrences générées
+            // tasks.addAll(generateRecurringTaskOccurrences(tasks));
             
         } catch (SQLException e) {
             System.out.println("Error fetching tasks: " + e.getMessage());
         }
+        return tasks;
+    }
+
+    // Nouvelle méthode pour obtenir les tâches y compris les occurrences générées
+    public static List<Task> getTasksWithOccurrences(int userId) {
+        List<Task> tasks = getTasksByUserId(userId);
+        tasks.addAll(generateRecurringTaskOccurrences(tasks));
         return tasks;
     }
 
@@ -107,7 +115,7 @@ public class TaskDAO {
                     rs.getInt("user_id"),
                     rs.getString("title"),
                     rs.getString("description"),
-                    rs.getDate("due_date"),
+                    rs.getTimestamp("due_date"),
                     rs.getString("status")
                 );
                 
@@ -155,7 +163,7 @@ public class TaskDAO {
             
             // If task is recurring, first create the pattern
             if (task.isRecurring()) {
-                String patternQuery = "INSERT INTO recurring_patterns (pattern_type, interval_value, end_date) VALUES (?, ?, ?)";
+                String patternQuery = "INSERT INTO recurring_patterns (pattern_type, interval_value, end_date, max_occurrences, day_of_week, day_of_month, month_of_year) VALUES (?, ?, ?, ?, ?, ?, ?)";
                 stmtPattern = conn.prepareStatement(patternQuery, Statement.RETURN_GENERATED_KEYS);
                 stmtPattern.setString(1, task.getRecurrenceType());
                 stmtPattern.setInt(2, task.getRecurrenceInterval());
@@ -164,6 +172,30 @@ public class TaskDAO {
                     stmtPattern.setDate(3, new java.sql.Date(task.getRecurrenceEndDate().getTime()));
                 } else {
                     stmtPattern.setNull(3, java.sql.Types.DATE);
+                }
+                
+                if (task.getMaxOccurrences() != null) {
+                    stmtPattern.setInt(4, task.getMaxOccurrences());
+                } else {
+                    stmtPattern.setNull(4, java.sql.Types.INTEGER);
+                }
+                
+                if (task.getDayOfWeek() != null) {
+                    stmtPattern.setInt(5, task.getDayOfWeek());
+                } else {
+                    stmtPattern.setNull(5, java.sql.Types.INTEGER);
+                }
+                
+                if (task.getDayOfMonth() != null) {
+                    stmtPattern.setInt(6, task.getDayOfMonth());
+                } else {
+                    stmtPattern.setNull(6, java.sql.Types.INTEGER);
+                }
+                
+                if (task.getMonthOfYear() != null) {
+                    stmtPattern.setInt(7, task.getMonthOfYear());
+                } else {
+                    stmtPattern.setNull(7, java.sql.Types.INTEGER);
                 }
                 
                 int patternResult = stmtPattern.executeUpdate();
@@ -182,7 +214,13 @@ public class TaskDAO {
             stmtTask.setInt(1, task.getUserId());
             stmtTask.setString(2, task.getTitle());
             stmtTask.setString(3, task.getDescription());
-            stmtTask.setDate(4, new java.sql.Date(task.getDueDate().getTime()));
+            
+            if (task.getDueDateTime() != null) {
+                stmtTask.setTimestamp(4, task.getDueDateTime());
+            } else {
+                stmtTask.setNull(4, java.sql.Types.TIMESTAMP);
+            }
+            
             stmtTask.setString(5, task.getStatus());
             
             if (task.getCategory() != null) {
@@ -251,21 +289,99 @@ public class TaskDAO {
             conn = DatabaseConnection.getConnection();
             conn.setAutoCommit(false);
             
-            // If task is recurring, update the pattern
-            if (task.isRecurring() && task.getRecurringPatternId() != null) {
-                String patternQuery = "UPDATE recurring_patterns SET pattern_type = ?, interval_value = ?, end_date = ? WHERE pattern_id = ?";
-                stmtPattern = conn.prepareStatement(patternQuery);
-                stmtPattern.setString(1, task.getRecurrenceType());
-                stmtPattern.setInt(2, task.getRecurrenceInterval());
-                
-                if (task.getRecurrenceEndDate() != null) {
-                    stmtPattern.setDate(3, new java.sql.Date(task.getRecurrenceEndDate().getTime()));
-                } else {
-                    stmtPattern.setNull(3, java.sql.Types.DATE);
+            Integer patternId = task.getRecurringPatternId();
+            
+            // Gérer la récurrence
+            if (task.isRecurring()) {
+                // Cas 1: Tâche déjà récurrente avec pattern existant - mettre à jour le pattern
+                if (patternId != null) {
+                    String patternQuery = "UPDATE recurring_patterns SET pattern_type = ?, interval_value = ?, end_date = ?, max_occurrences = ?, " +
+                                          "day_of_week = ?, day_of_month = ?, month_of_year = ? WHERE pattern_id = ?";
+                    stmtPattern = conn.prepareStatement(patternQuery);
+                    stmtPattern.setString(1, task.getRecurrenceType());
+                    stmtPattern.setInt(2, task.getRecurrenceInterval());
+                    
+                    if (task.getRecurrenceEndDate() != null) {
+                        stmtPattern.setDate(3, new java.sql.Date(task.getRecurrenceEndDate().getTime()));
+                    } else {
+                        stmtPattern.setNull(3, java.sql.Types.DATE);
+                    }
+                    
+                    if (task.getMaxOccurrences() != null) {
+                        stmtPattern.setInt(4, task.getMaxOccurrences());
+                    } else {
+                        stmtPattern.setNull(4, java.sql.Types.INTEGER);
+                    }
+                    
+                    if (task.getDayOfWeek() != null) {
+                        stmtPattern.setInt(5, task.getDayOfWeek());
+                    } else {
+                        stmtPattern.setNull(5, java.sql.Types.INTEGER);
+                    }
+                    
+                    if (task.getDayOfMonth() != null) {
+                        stmtPattern.setInt(6, task.getDayOfMonth());
+                    } else {
+                        stmtPattern.setNull(6, java.sql.Types.INTEGER);
+                    }
+                    
+                    if (task.getMonthOfYear() != null) {
+                        stmtPattern.setInt(7, task.getMonthOfYear());
+                    } else {
+                        stmtPattern.setNull(7, java.sql.Types.INTEGER);
+                    }
+                    
+                    stmtPattern.setInt(8, patternId);
+                    stmtPattern.executeUpdate();
+                } 
+                // Cas 2: Nouvelle tâche récurrente - créer un nouveau pattern
+                else {
+                    String patternQuery = "INSERT INTO recurring_patterns (pattern_type, interval_value, end_date, max_occurrences, day_of_week, day_of_month, month_of_year) " +
+                                         "VALUES (?, ?, ?, ?, ?, ?, ?)";
+                    stmtPattern = conn.prepareStatement(patternQuery, Statement.RETURN_GENERATED_KEYS);
+                    stmtPattern.setString(1, task.getRecurrenceType());
+                    stmtPattern.setInt(2, task.getRecurrenceInterval());
+                    
+                    if (task.getRecurrenceEndDate() != null) {
+                        stmtPattern.setDate(3, new java.sql.Date(task.getRecurrenceEndDate().getTime()));
+                    } else {
+                        stmtPattern.setNull(3, java.sql.Types.DATE);
+                    }
+                    
+                    if (task.getMaxOccurrences() != null) {
+                        stmtPattern.setInt(4, task.getMaxOccurrences());
+                    } else {
+                        stmtPattern.setNull(4, java.sql.Types.INTEGER);
+                    }
+                    
+                    if (task.getDayOfWeek() != null) {
+                        stmtPattern.setInt(5, task.getDayOfWeek());
+                    } else {
+                        stmtPattern.setNull(5, java.sql.Types.INTEGER);
+                    }
+                    
+                    if (task.getDayOfMonth() != null) {
+                        stmtPattern.setInt(6, task.getDayOfMonth());
+                    } else {
+                        stmtPattern.setNull(6, java.sql.Types.INTEGER);
+                    }
+                    
+                    if (task.getMonthOfYear() != null) {
+                        stmtPattern.setInt(7, task.getMonthOfYear());
+                    } else {
+                        stmtPattern.setNull(7, java.sql.Types.INTEGER);
+                    }
+                    
+                    int patternResult = stmtPattern.executeUpdate();
+                    
+                    if (patternResult > 0) {
+                        ResultSet generatedKeys = stmtPattern.getGeneratedKeys();
+                        if (generatedKeys.next()) {
+                            patternId = generatedKeys.getInt(1);
+                            task.setRecurringPatternId(patternId);
+                        }
+                    }
                 }
-                
-                stmtPattern.setInt(4, task.getRecurringPatternId());
-                stmtPattern.executeUpdate();
             }
             
             // Update the task
@@ -276,7 +392,13 @@ public class TaskDAO {
             stmtTask = conn.prepareStatement(taskQuery);
             stmtTask.setString(1, task.getTitle());
             stmtTask.setString(2, task.getDescription());
-            stmtTask.setDate(3, new java.sql.Date(task.getDueDate().getTime()));
+            
+            if (task.getDueDateTime() != null) {
+                stmtTask.setTimestamp(3, task.getDueDateTime());
+            } else {
+                stmtTask.setNull(3, java.sql.Types.TIMESTAMP);
+            }
+            
             stmtTask.setString(4, task.getStatus());
             
             if (task.getCategory() != null) {
@@ -287,8 +409,8 @@ public class TaskDAO {
             
             stmtTask.setBoolean(6, task.isRecurring());
             
-            if (task.getRecurringPatternId() != null) {
-                stmtTask.setInt(7, task.getRecurringPatternId());
+            if (patternId != null) {
+                stmtTask.setInt(7, patternId);
             } else {
                 stmtTask.setNull(7, java.sql.Types.INTEGER);
             }
@@ -394,7 +516,7 @@ public class TaskDAO {
                     rs.getInt("user_id"),
                     rs.getString("title"),
                     rs.getString("description"),
-                    rs.getDate("due_date"),
+                    rs.getTimestamp("due_date"),
                     rs.getString("status")
                 );
                 
@@ -421,12 +543,19 @@ public class TaskDAO {
                 tasks.add(task);
             }
             
-            // Add generated occurrences of recurring tasks
-            tasks.addAll(generateRecurringTaskOccurrences(tasks));
+            // Ne plus ajouter automatiquement les occurrences générées
+            // tasks.addAll(generateRecurringTaskOccurrences(tasks));
             
         } catch (SQLException e) {
             System.out.println("Error fetching tasks by category: " + e.getMessage());
         }
+        return tasks;
+    }
+    
+    // Nouvelle méthode pour obtenir les tâches par catégorie y compris les occurrences
+    public static List<Task> getTasksByCategoyWithOccurrences(int userId, int categoryId) {
+        List<Task> tasks = getTasksByCategory(userId, categoryId);
+        tasks.addAll(generateRecurringTaskOccurrences(tasks));
         return tasks;
     }
     
@@ -451,8 +580,10 @@ public class TaskDAO {
     }
     
     // Create a recurring pattern and return its ID
-    public static Integer createRecurringPattern(String patternType, int intervalValue, Date endDate) {
-        String query = "INSERT INTO recurring_patterns (pattern_type, interval_value, end_date) VALUES (?, ?, ?)";
+    public static Integer createRecurringPattern(String patternType, int intervalValue, Date endDate, Integer maxOccurrences, 
+                                               Integer dayOfWeek, Integer dayOfMonth, Integer monthOfYear) {
+        String query = "INSERT INTO recurring_patterns (pattern_type, interval_value, end_date, max_occurrences, day_of_week, day_of_month, month_of_year) " +
+                       "VALUES (?, ?, ?, ?, ?, ?, ?)";
         
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(query, Statement.RETURN_GENERATED_KEYS)) {
@@ -464,6 +595,30 @@ public class TaskDAO {
                 stmt.setDate(3, new java.sql.Date(endDate.getTime()));
             } else {
                 stmt.setNull(3, java.sql.Types.DATE);
+            }
+            
+            if (maxOccurrences != null) {
+                stmt.setInt(4, maxOccurrences);
+            } else {
+                stmt.setNull(4, java.sql.Types.INTEGER);
+            }
+            
+            if (dayOfWeek != null) {
+                stmt.setInt(5, dayOfWeek);
+            } else {
+                stmt.setNull(5, java.sql.Types.INTEGER);
+            }
+            
+            if (dayOfMonth != null) {
+                stmt.setInt(6, dayOfMonth);
+            } else {
+                stmt.setNull(6, java.sql.Types.INTEGER);
+            }
+            
+            if (monthOfYear != null) {
+                stmt.setInt(7, monthOfYear);
+            } else {
+                stmt.setNull(7, java.sql.Types.INTEGER);
             }
             
             int result = stmt.executeUpdate();

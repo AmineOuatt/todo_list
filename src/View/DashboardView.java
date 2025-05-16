@@ -104,8 +104,8 @@ public class DashboardView extends JFrame {
     }
     
     private void loadDataFromDatabase() {
-        // Get all tasks for the user
-        List<Task> allTasks = TaskDAO.getTasksByUserId(userId);
+        // Get all tasks for the user (sans les occurrences générées)
+        List<Task> allTasks = TaskController.getTasks(userId);
         
         // Count tasks by status
         for (Task task : allTasks) {
@@ -391,8 +391,8 @@ public class DashboardView extends JFrame {
         tasksPanel.setBackground(CARD_COLOR);
         tasksPanel.setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
         
-        // Load tasks from database
-        List<Task> tasks = TaskDAO.getTasksByUserId(userId);
+        // Load tasks from database (sans les occurrences générées)
+        List<Task> tasks = TaskController.getTasks(userId);
         
         // Display up to 5 most recent tasks
         int count = 0;
@@ -542,18 +542,22 @@ public class DashboardView extends JFrame {
         Calendar dueDate = Calendar.getInstance();
         dueDate.setTime(date);
 
+        // Format pour inclure l'heure
+        SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm");
+        String timeStr = timeFormat.format(date);
+
         if (today.get(Calendar.YEAR) == dueDate.get(Calendar.YEAR) &&
             today.get(Calendar.DAY_OF_YEAR) == dueDate.get(Calendar.DAY_OF_YEAR)) {
-            return "Today";
+            return "Today at " + timeStr;
         } else if (today.get(Calendar.YEAR) == dueDate.get(Calendar.YEAR) &&
                    today.get(Calendar.DAY_OF_YEAR) + 1 == dueDate.get(Calendar.DAY_OF_YEAR)) {
-            return "Tomorrow";
+            return "Tomorrow at " + timeStr;
         } else if (date.before(new Date())) {
             SimpleDateFormat sdf = new SimpleDateFormat("d MMM");
-            return "Overdue: " + sdf.format(date);
+            return "Overdue: " + sdf.format(date) + " " + timeStr;
         } else {
             SimpleDateFormat sdf = new SimpleDateFormat("d MMM");
-            return "Due: " + sdf.format(date);
+            return "Due: " + sdf.format(date) + " at " + timeStr;
         }
     }
     

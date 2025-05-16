@@ -132,7 +132,7 @@ CREATE TABLE `tasks` (
   `user_id` int(11) NOT NULL,
   `title` varchar(255) NOT NULL,
   `description` text DEFAULT NULL,
-  `due_date` date DEFAULT NULL,
+  `due_date` datetime DEFAULT NULL,
   `STATUS` enum('pending','in progress','completed') DEFAULT 'pending',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `category_id` int(11) DEFAULT NULL,

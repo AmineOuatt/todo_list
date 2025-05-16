@@ -323,7 +323,11 @@ public class TaskFrame extends JFrame {
     private JComboBox<String> recurrenceTypeComboBox;
     private JSpinner recurrenceIntervalSpinner;
     private JSpinner recurrenceEndDateSpinner;
+    private JSpinner occurrencesSpinner;
     private JPanel recurrencePanel;
+    private JComboBox<String> dayOfWeekComboBox;
+    private JSpinner dayOfMonthSpinner;
+    private JComboBox<String> monthOfYearComboBox;
 
     public TaskFrame(int userId) {
         this.userId = userId;
@@ -1328,8 +1332,8 @@ public class TaskFrame extends JFrame {
         gbc.gridy++;
         gbc.insets = new Insets(5, 0, 10, 0);
         
-        // Due Date field
-        JLabel dueDateLabel = new JLabel("Due Date");
+        // Due Date field with time
+        JLabel dueDateLabel = new JLabel("Due Date & Time");
         dueDateLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
         formPanel.add(dueDateLabel, gbc);
         
@@ -1337,7 +1341,7 @@ public class TaskFrame extends JFrame {
         gbc.insets = new Insets(0, 0, 15, 0);
         SpinnerDateModel dateModel = new SpinnerDateModel();
         dueDateSpinner = new JSpinner(dateModel);
-        JSpinner.DateEditor dateEditor = new JSpinner.DateEditor(dueDateSpinner, "dd/MM/yyyy");
+        JSpinner.DateEditor dateEditor = new JSpinner.DateEditor(dueDateSpinner, "dd/MM/yyyy HH:mm");
         dueDateSpinner.setEditor(dateEditor);
         dueDateSpinner.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         dueDateSpinner.setBorder(BorderFactory.createCompoundBorder(
@@ -1394,6 +1398,65 @@ public class TaskFrame extends JFrame {
         ));
         recurrencePanel.add(recurrenceTypeComboBox, gbcRecur);
         
+        // Ajouter les sélecteurs spécifiques pour chaque type de récurrence
+        gbcRecur.gridy++;
+        gbcRecur.insets = new Insets(15, 0, 5, 0);
+        JLabel specificLabel = new JLabel("Specific Settings");
+        specificLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        recurrencePanel.add(specificLabel, gbcRecur);
+        
+        // Jour de la semaine (pour Weekly)
+        gbcRecur.gridy++;
+        gbcRecur.insets = new Insets(5, 0, 5, 0);
+        JPanel weeklyPanel = new JPanel(new BorderLayout(5, 0));
+        weeklyPanel.setBackground(BACKGROUND_COLOR);
+        JLabel dayOfWeekLabel = new JLabel("Day of Week:");
+        dayOfWeekLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        weeklyPanel.add(dayOfWeekLabel, BorderLayout.WEST);
+        
+        String[] daysOfWeek = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
+        dayOfWeekComboBox = new JComboBox<>(daysOfWeek);
+        dayOfWeekComboBox.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        weeklyPanel.add(dayOfWeekComboBox, BorderLayout.CENTER);
+        recurrencePanel.add(weeklyPanel, gbcRecur);
+        
+        // Jour du mois (pour Monthly)
+        gbcRecur.gridy++;
+        JPanel monthlyPanel = new JPanel(new BorderLayout(5, 0));
+        monthlyPanel.setBackground(BACKGROUND_COLOR);
+        JLabel dayOfMonthLabel = new JLabel("Day of Month:");
+        dayOfMonthLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        monthlyPanel.add(dayOfMonthLabel, BorderLayout.WEST);
+        
+        SpinnerNumberModel dayOfMonthModel = new SpinnerNumberModel(1, 1, 31, 1);
+        dayOfMonthSpinner = new JSpinner(dayOfMonthModel);
+        dayOfMonthSpinner.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        monthlyPanel.add(dayOfMonthSpinner, BorderLayout.CENTER);
+        recurrencePanel.add(monthlyPanel, gbcRecur);
+        
+        // Mois de l'année (pour Yearly)
+        gbcRecur.gridy++;
+        JPanel yearlyPanel = new JPanel(new BorderLayout(5, 0));
+        yearlyPanel.setBackground(BACKGROUND_COLOR);
+        JLabel monthOfYearLabel = new JLabel("Month of Year:");
+        monthOfYearLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        yearlyPanel.add(monthOfYearLabel, BorderLayout.WEST);
+        
+        String[] monthsOfYear = {"January", "February", "March", "April", "May", "June", 
+                                 "July", "August", "September", "October", "November", "December"};
+        monthOfYearComboBox = new JComboBox<>(monthsOfYear);
+        monthOfYearComboBox.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        yearlyPanel.add(monthOfYearComboBox, BorderLayout.CENTER);
+        recurrencePanel.add(yearlyPanel, gbcRecur);
+        
+        // Montrer/cacher les options en fonction du type de récurrence
+        recurrenceTypeComboBox.addActionListener(e -> {
+            String selectedType = (String) recurrenceTypeComboBox.getSelectedItem();
+            weeklyPanel.setVisible("Weekly".equals(selectedType));
+            monthlyPanel.setVisible("Monthly".equals(selectedType));
+            yearlyPanel.setVisible("Yearly".equals(selectedType));
+        });
+        
         // Recurrence interval
         gbcRecur.gridy++;
         gbcRecur.insets = new Insets(15, 0, 5, 0);
@@ -1447,7 +1510,7 @@ public class TaskFrame extends JFrame {
         gbcRecur.gridy++;
         gbcRecur.insets = new Insets(0, 0, 15, 0);
         SpinnerNumberModel occurrencesModel = new SpinnerNumberModel(5, 1, 100, 1);
-        JSpinner occurrencesSpinner = new JSpinner(occurrencesModel);
+        occurrencesSpinner = new JSpinner(occurrencesModel);
         occurrencesSpinner.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         occurrencesSpinner.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(BORDER_COLOR),
@@ -2262,7 +2325,7 @@ public class TaskFrame extends JFrame {
         taskListModel.clear();
         
         try {
-            // Get fresh data from the database
+            // Get fresh data from the database - using normal tasks without occurrences for list view
             List<Task> tasks = TaskController.getTasks(userId);
             
             // Add each task to the list model
@@ -2649,7 +2712,7 @@ public class TaskFrame extends JFrame {
     private void updateCalendar() {
         monthLabel.setText(monthFormat.format(currentCalendar.getTime()));
         
-        // Get tasks for the month
+        // Get tasks for the month INCLUDING generated occurrences
         Calendar cal = (Calendar) currentCalendar.clone();
         cal.set(Calendar.DAY_OF_MONTH, 1);
         
@@ -2678,8 +2741,8 @@ public class TaskFrame extends JFrame {
         // Get today's date for highlighting
         Calendar today = Calendar.getInstance();
         
-        // Load fresh data from the database
-        loadTasks();
+        // Load fresh data from the database WITH RECURRING OCCURRENCES for calendar view
+        List<Task> tasksWithOccurrences = TaskController.getTasksWithOccurrences(userId);
         
         // Fill calendar with dates
         for (int i = 0; i < daysInMonth; i++) {
@@ -2711,15 +2774,7 @@ public class TaskFrame extends JFrame {
             }
             
             // Add tasks for this day
-            for (int j = 0; j < taskListModel.getSize(); j++) {
-                Task task = taskListModel.getElementAt(j);
-                
-                // Get the task with fresh data from database to ensure we have the latest status
-                Task refreshedTask = TaskController.getTaskById(task.getTaskId());
-                if (refreshedTask != null) {
-                    task = refreshedTask;
-                }
-                
+            for (Task task : tasksWithOccurrences) {
                 // Skip tasks without due dates
                 if (task.getDueDate() == null) continue;
                 
@@ -3060,6 +3115,29 @@ public class TaskFrame extends JFrame {
         String recurrenceType = isRecurring ? (String) recurrenceTypeComboBox.getSelectedItem() : null;
         int recurrenceInterval = isRecurring ? (int) recurrenceIntervalSpinner.getValue() : 0;
         Date recurrenceEndDate = isRecurring ? (Date) recurrenceEndDateSpinner.getValue() : null;
+        // Get max occurrences value
+        Integer maxOccurrences = isRecurring ? (Integer) occurrencesSpinner.getValue() : null;
+        
+        // Récupérer les valeurs spécifiques en fonction du type de récurrence
+        Integer dayOfWeek = null;
+        Integer dayOfMonth = null;
+        Integer monthOfYear = null;
+        
+        if (isRecurring) {
+            switch (recurrenceType) {
+                case "Weekly":
+                    // Convertir le jour de la semaine en entier (dimanche=1, lundi=2, etc.)
+                    dayOfWeek = dayOfWeekComboBox.getSelectedIndex() + 1;
+                    break;
+                case "Monthly":
+                    dayOfMonth = (Integer) dayOfMonthSpinner.getValue();
+                    break;
+                case "Yearly":
+                    // Convertir le mois en entier (janvier=1, février=2, etc.)
+                    monthOfYear = monthOfYearComboBox.getSelectedIndex() + 1;
+                    break;
+            }
+        }
         
         if (title.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Title cannot be empty!", "Invalid Input", JOptionPane.WARNING_MESSAGE);
@@ -3078,7 +3156,11 @@ public class TaskFrame extends JFrame {
                 isRecurring,
                 recurrenceType,
                 recurrenceInterval,
-                recurrenceEndDate
+                recurrenceEndDate,
+                maxOccurrences,
+                dayOfWeek,
+                dayOfMonth,
+                monthOfYear
             );
         } else {
             success = TaskController.createTask(
@@ -3090,7 +3172,11 @@ public class TaskFrame extends JFrame {
                 isRecurring,
                 recurrenceType,
                 recurrenceInterval,
-                recurrenceEndDate
+                recurrenceEndDate,
+                maxOccurrences,
+                dayOfWeek,
+                dayOfMonth,
+                monthOfYear
             );
         }
         

@@ -1,13 +1,14 @@
 package Model;
 
 import java.util.Date;
+import java.sql.Timestamp;
 
 public class Task {
     private int taskId;
     private int userId;
     private String title;
     private String description;
-    private Date dueDate;
+    private Timestamp dueDateTime;
     private String status;
     private Category category;
     private boolean isRecurring;
@@ -16,13 +17,17 @@ public class Task {
     private Date recurrenceEndDate;
     private Integer parentTaskId;
     private Integer recurringPatternId;
+    private Integer maxOccurrences;
+    private Integer dayOfWeek;
+    private Integer dayOfMonth;
+    private Integer monthOfYear;
 
-    public Task(int taskId, int userId, String title, String description, Date dueDate, String status) {
+    public Task(int taskId, int userId, String title, String description, Timestamp dueDateTime, String status) {
         this.taskId = taskId;
         this.userId = userId;
         this.title = title;
         this.description = description;
-        this.dueDate = dueDate;
+        this.dueDateTime = dueDateTime;
         this.status = status;
         this.category = null;
         this.isRecurring = false;
@@ -31,14 +36,24 @@ public class Task {
         this.recurrenceEndDate = null;
         this.parentTaskId = null;
         this.recurringPatternId = null;
+        this.maxOccurrences = null;
+        this.dayOfWeek = null;
+        this.dayOfMonth = null;
+        this.monthOfYear = null;
+    }
+    
+    public Task(int taskId, int userId, String title, String description, Date dueDate, String status) {
+        this(taskId, userId, title, description, 
+            dueDate != null ? new Timestamp(dueDate.getTime()) : null, 
+            status);
     }
 
-    public Task(int taskId, int userId, String title, String description, Date dueDate, String status, Category category) {
+    public Task(int taskId, int userId, String title, String description, Timestamp dueDateTime, String status, Category category) {
         this.taskId = taskId;
         this.userId = userId;
         this.title = title;
         this.description = description;
-        this.dueDate = dueDate;
+        this.dueDateTime = dueDateTime;
         this.status = status;
         this.category = category;
         this.isRecurring = false;
@@ -47,16 +62,26 @@ public class Task {
         this.recurrenceEndDate = null;
         this.parentTaskId = null;
         this.recurringPatternId = null;
+        this.maxOccurrences = null;
+        this.dayOfWeek = null;
+        this.dayOfMonth = null;
+        this.monthOfYear = null;
     }
     
-    public Task(int taskId, int userId, String title, String description, Date dueDate, String status, 
+    public Task(int taskId, int userId, String title, String description, Date dueDate, String status, Category category) {
+        this(taskId, userId, title, description, 
+            dueDate != null ? new Timestamp(dueDate.getTime()) : null, 
+            status, category);
+    }
+    
+    public Task(int taskId, int userId, String title, String description, Timestamp dueDateTime, String status, 
                 Category category, boolean isRecurring, String recurrenceType, int recurrenceInterval, 
                 Date recurrenceEndDate, Integer parentTaskId, Integer recurringPatternId) {
         this.taskId = taskId;
         this.userId = userId;
         this.title = title;
         this.description = description;
-        this.dueDate = dueDate;
+        this.dueDateTime = dueDateTime;
         this.status = status;
         this.category = category;
         this.isRecurring = isRecurring;
@@ -65,6 +90,19 @@ public class Task {
         this.recurrenceEndDate = recurrenceEndDate;
         this.parentTaskId = parentTaskId;
         this.recurringPatternId = recurringPatternId;
+        this.maxOccurrences = null;
+        this.dayOfWeek = null;
+        this.dayOfMonth = null;
+        this.monthOfYear = null;
+    }
+    
+    public Task(int taskId, int userId, String title, String description, Date dueDate, String status, 
+                Category category, boolean isRecurring, String recurrenceType, int recurrenceInterval, 
+                Date recurrenceEndDate, Integer parentTaskId, Integer recurringPatternId) {
+        this(taskId, userId, title, description, 
+            dueDate != null ? new Timestamp(dueDate.getTime()) : null, 
+            status, category, isRecurring, recurrenceType, recurrenceInterval,
+            recurrenceEndDate, parentTaskId, recurringPatternId);
     }
 
     public int getTaskId() {
@@ -91,12 +129,20 @@ public class Task {
         this.description = description;
     }
 
+    public Timestamp getDueDateTime() {
+        return dueDateTime;
+    }
+
+    public void setDueDateTime(Timestamp dueDateTime) {
+        this.dueDateTime = dueDateTime;
+    }
+    
     public Date getDueDate() {
-        return dueDate;
+        return dueDateTime != null ? new Date(dueDateTime.getTime()) : null;
     }
 
     public void setDueDate(Date dueDate) {
-        this.dueDate = dueDate;
+        this.dueDateTime = dueDate != null ? new Timestamp(dueDate.getTime()) : null;
     }
 
     public String getStatus() {
@@ -173,5 +219,37 @@ public class Task {
     
     public void setRecurringPatternId(Integer recurringPatternId) {
         this.recurringPatternId = recurringPatternId;
+    }
+
+    public Integer getMaxOccurrences() {
+        return maxOccurrences;
+    }
+    
+    public void setMaxOccurrences(Integer maxOccurrences) {
+        this.maxOccurrences = maxOccurrences;
+    }
+
+    public Integer getDayOfWeek() {
+        return dayOfWeek;
+    }
+    
+    public void setDayOfWeek(Integer dayOfWeek) {
+        this.dayOfWeek = dayOfWeek;
+    }
+    
+    public Integer getDayOfMonth() {
+        return dayOfMonth;
+    }
+    
+    public void setDayOfMonth(Integer dayOfMonth) {
+        this.dayOfMonth = dayOfMonth;
+    }
+    
+    public Integer getMonthOfYear() {
+        return monthOfYear;
+    }
+    
+    public void setMonthOfYear(Integer monthOfYear) {
+        this.monthOfYear = monthOfYear;
     }
 }
