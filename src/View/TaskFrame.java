@@ -137,6 +137,7 @@ public class TaskFrame extends JFrame {
     private CircularProgressPanel progressPanel;
 
     private JPanel navigationPanel;
+    private SidebarPanel sidebarPanel;
 
     private Color currentPomodoroColor = PRIMARY_COLOR;
     private int pomodoroCount = 0;
@@ -442,7 +443,29 @@ public class TaskFrame extends JFrame {
         setLayout(new BorderLayout());
         
         // Create navigation sidebar
-        navigationPanel = createNavigationPanel();
+        sidebarPanel = new SidebarPanel(e -> {
+            String action = e.getActionCommand();
+            if ("LOGOUT".equals(action)) {
+                logout();
+            } else {
+                showPanel(action);
+            }
+        });
+        
+        // Set icons for the sidebar buttons
+        sidebarPanel.setButtonIcon("TASKS", createTaskIcon());
+        sidebarPanel.setButtonIcon("POMODORO", createPomodoroIcon());
+        sidebarPanel.setButtonIcon("DASHBOARD", createDashboardIcon());
+        sidebarPanel.setButtonIcon("CALENDAR", createCalendarIcon());
+        sidebarPanel.setButtonIcon("NOTES", createNoteIcon());
+        sidebarPanel.setButtonIcon("LOGOUT", createLogoutIcon());
+        
+        // Store references for later use
+        navigationPanel = sidebarPanel;
+        pomodoroButton = sidebarPanel.getPomodoroButton();
+        calendarButton = sidebarPanel.getCalendarButton();
+        dashboardButton = sidebarPanel.getDashboardButton();
+        
         add(navigationPanel, BorderLayout.WEST);
         
         // Create main content panel with card layout
@@ -473,8 +496,8 @@ public class TaskFrame extends JFrame {
         // Create dashboard panel
         dashboardPanel = createDashboardPanel();
         
-        // Create calendar panel - store the reference first
-        calendarPanel = createCalendarPanel();
+        // Create calendar panel using the new CalendarPanel class
+        calendarPanel = new CalendarPanel(userId, this::displayTaskDetails);
         
         // Create notes panel with card layout to switch between list-only and details views
         JPanel notesPanel = new JPanel(new CardLayout());
@@ -508,145 +531,12 @@ public class TaskFrame extends JFrame {
         initializePomodoroTimer();
         
         // Now that everything is set up, we can update the calendar
-        updateCalendar();
+        ((CalendarPanel) calendarPanel).updateCalendar();
         
         // Show tasks panel by default
         showPanel("TASKS");
         
         pack();
-    }
-
-    private JPanel createNavigationPanel() {
-        JPanel panel = new JPanel();
-        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-        panel.setBackground(SIDEBAR_COLOR);
-        panel.setBorder(new EmptyBorder(20, 15, 20, 15));
-
-        // Add logo/brand at the top
-        JLabel logoLabel = new JLabel("TaskFrame");
-        logoLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
-        logoLabel.setForeground(PRIMARY_COLOR);
-        logoLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        panel.add(logoLabel);
-        panel.add(Box.createVerticalStrut(25));
-
-        // Create navigation options with custom icons instead of Unicode
-        String[] navLabels = {"Tasks", "Pomodoro", "Dashboard", "Calendar", "Notes"};
-        String[] navActions = {"TASKS", "POMODORO", "DASHBOARD", "CALENDAR", "NOTES"};
-
-        for (int i = 0; i < navLabels.length; i++) {
-            JButton button = new JButton(navLabels[i]);
-            
-            // Set appropriate icon based on button type
-            switch (i) {
-                case 0: // Tasks
-                    button.setIcon(createTaskIcon());
-                    break;
-                case 1: // Pomodoro
-                    button.setIcon(createPomodoroIcon());
-                    break;
-                case 2: // Dashboard
-                    button.setIcon(createDashboardIcon());
-                    break;
-                case 3: // Calendar
-                    button.setIcon(createCalendarIcon());
-                    break;
-                case 4: // Notes
-                    button.setIcon(createNoteIcon());
-                    break;
-            }
-            
-            styleNavigationButton(button);
-            final String action = navActions[i];
-            button.addActionListener(e -> showPanel(action));
-            panel.add(button);
-            panel.add(Box.createVerticalStrut(5));
-            
-            // Store references to these buttons for selection highlighting
-            if (i == 0) {
-                // Task button
-            } else if (i == 1) {
-                pomodoroButton = button;
-            } else if (i == 2) {
-                dashboardButton = button;
-            } else if (i == 3) {
-                calendarButton = button;
-            } else if (i == 4) {
-                // Notes button
-            }
-        }
-
-        panel.add(Box.createVerticalGlue());
-
-        // Add separator before logout
-        JSeparator separator = new JSeparator(JSeparator.HORIZONTAL);
-        separator.setForeground(BORDER_COLOR);
-        separator.setBackground(SIDEBAR_COLOR);
-        separator.setMaximumSize(new Dimension(Integer.MAX_VALUE, 1));
-        panel.add(separator);
-        panel.add(Box.createVerticalStrut(15));
-
-        // Add logout button at the bottom with custom icon
-        JButton logoutButton = new JButton();
-        logoutButton.setLayout(new BorderLayout(10, 0));
-        
-        // Replace door icon panel implementation with custom-drawn icon
-        logoutButton.setIcon(createLogoutIcon());
-        
-        // Create text label
-        JLabel textLabel = new JLabel("Logout");
-        textLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        textLabel.setForeground(new Color(255, 89, 89));
-        
-        logoutButton.add(textLabel, BorderLayout.CENTER);
-        styleNavigationButton(logoutButton);
-        
-        // Override the default style for logout button
-        logoutButton.setBorder(BorderFactory.createEmptyBorder(8, 12, 8, 12));
-        logoutButton.addActionListener(e -> logout());
-        panel.add(logoutButton);
-
-        return panel;
-    }
-
-    private void styleNavigationButton(JButton button) {
-        button.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        button.setForeground(TEXT_COLOR);
-        button.setBackground(SIDEBAR_COLOR);
-        button.setBorder(BorderFactory.createEmptyBorder(8, 12, 8, 12));
-        button.setHorizontalAlignment(SwingConstants.LEFT);
-        button.setAlignmentX(Component.LEFT_ALIGNMENT);
-        button.setMaximumSize(new Dimension(Integer.MAX_VALUE, button.getPreferredSize().height));
-        button.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        button.setFocusPainted(false);
-
-        button.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                button.setBackground(HOVER_COLOR);
-            }
-
-            @Override
-            public void mouseExited(MouseEvent e) {
-                button.setBackground(SIDEBAR_COLOR);
-            }
-        });
-    }
-
-    private void updateSelectedButton(JButton selectedButton) {
-        Component[] components = navigationPanel.getComponents();
-        for (Component component : components) {
-            if (component instanceof JButton) {
-                JButton button = (JButton) component;
-                if (button == selectedButton) {
-                    button.setBackground(PRIMARY_COLOR);
-                    button.setForeground(Color.WHITE);
-                } else {
-                    button.setBackground(Color.WHITE);
-                    button.setForeground(PRIMARY_COLOR);
-                }
-            }
-        }
     }
 
     private void updateDashboard() {
@@ -2125,11 +2015,13 @@ public class TaskFrame extends JFrame {
                 // Update UI after status change
                 loadTasks();
                 updateDashboard();
-                updateCalendar();
+                // Update calendar using CalendarPanel's method
+                ((CalendarPanel) calendarPanel).updateCalendar();
             }
         });
         
         panel.add(checkbox, BorderLayout.WEST);
+
 
         // Task details
         JPanel details = new JPanel(new BorderLayout(5, 0));
@@ -2675,11 +2567,35 @@ public class TaskFrame extends JFrame {
     /**
      * Displays the details of a task in the task details panel
      */
-    private void displayTaskDetails(Task task) {
+    public void displayTaskDetails(Task task) {
         // Get the latest version of the task from the database
         Task freshTask = TaskController.getTaskById(task.getTaskId());
         if (freshTask != null) {
             task = freshTask;
+        }
+        
+        // Ensure this task is selected in the taskList to enable proper update workflow
+        boolean isSelected = false;
+        for (int i = 0; i < taskListModel.getSize(); i++) {
+            Task listTask = taskListModel.getElementAt(i);
+            if (listTask.getTaskId() == task.getTaskId()) {
+                taskList.setSelectedValue(listTask, true);
+                isSelected = true;
+                break;
+            }
+        }
+        
+        // If the task wasn't found in the list (might happen with calendar view)
+        // reload the tasks and try again
+        if (!isSelected) {
+            loadTasks();
+            for (int i = 0; i < taskListModel.getSize(); i++) {
+                Task listTask = taskListModel.getElementAt(i);
+                if (listTask.getTaskId() == task.getTaskId()) {
+                    taskList.setSelectedValue(listTask, true);
+                    break;
+                }
+            }
         }
         
         titleField.setText(task.getTitle());
@@ -2808,334 +2724,38 @@ public class TaskFrame extends JFrame {
         taskList.clearSelection();
     }
 
-    /**
-     * Creates the calendar panel for viewing tasks by date
-     */
-    private JPanel createCalendarPanel() {
-        JPanel panel = new JPanel(new BorderLayout());
-        panel.setBackground(BACKGROUND_COLOR);
-        panel.setBorder(new EmptyBorder(20, 20, 20, 20));
-        
-        // Create header
-        JPanel headerPanel = new JPanel(new BorderLayout());
-        headerPanel.setBackground(BACKGROUND_COLOR);
-        headerPanel.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, BORDER_COLOR));
-        
-        // Month navigation
-        JPanel monthNavPanel = new JPanel(new BorderLayout());
-        monthNavPanel.setBackground(BACKGROUND_COLOR);
-        
-        JButton prevButton = new JButton("◀");
-        prevButton.setFocusPainted(false);
-        prevButton.setBorderPainted(false);
-        prevButton.setContentAreaFilled(false);
-        prevButton.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        prevButton.setForeground(PRIMARY_COLOR);
-        
-        JButton nextButton = new JButton("▶");
-        nextButton.setFocusPainted(false);
-        nextButton.setBorderPainted(false);
-        nextButton.setContentAreaFilled(false);
-        nextButton.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        nextButton.setForeground(PRIMARY_COLOR);
-        
-        // Current month label
-        currentCalendar = Calendar.getInstance();
-        monthLabel = new JLabel(monthFormat.format(currentCalendar.getTime()), JLabel.CENTER);
-        monthLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
-        
-        // Add buttons to navigate between months
-        prevButton.addActionListener(e -> {
-            currentCalendar.add(Calendar.MONTH, -1);
-            updateCalendar();
-        });
-        
-        nextButton.addActionListener(e -> {
-            currentCalendar.add(Calendar.MONTH, 1);
-            updateCalendar();
-        });
-        
-        monthNavPanel.add(prevButton, BorderLayout.WEST);
-        monthNavPanel.add(monthLabel, BorderLayout.CENTER);
-        monthNavPanel.add(nextButton, BorderLayout.EAST);
-        
-        headerPanel.add(monthNavPanel, BorderLayout.NORTH);
-        
-        // Days of week header
-        JPanel daysHeader = new JPanel(new GridLayout(1, 7));
-        daysHeader.setBackground(BACKGROUND_COLOR);
-        
-        String[] daysOfWeek = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
-        for (String day : daysOfWeek) {
-            JLabel dayLabel = new JLabel(day, JLabel.CENTER);
-            dayLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
-            daysHeader.add(dayLabel);
-        }
-        
-        headerPanel.add(daysHeader, BorderLayout.SOUTH);
-        panel.add(headerPanel, BorderLayout.NORTH);
-        
-        // Calendar grid
-        JPanel calendarGrid = new JPanel(new GridLayout(6, 7));
-        calendarGrid.setBackground(BACKGROUND_COLOR);
-        
-        // Fill the calendar grid with day cells
-        for (int i = 0; i < 42; i++) {
-            JPanel dayCell = new JPanel(new BorderLayout());
-            dayCell.setBorder(BorderFactory.createLineBorder(BORDER_COLOR));
-            dayCell.setBackground(CARD_COLOR);
-            
-            JLabel dateLabel = new JLabel("", JLabel.RIGHT);
-            dateLabel.setBorder(new EmptyBorder(5, 5, 5, 5));
-            dateLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-            
-        JPanel tasksPanel = new JPanel();
-        tasksPanel.setLayout(new BoxLayout(tasksPanel, BoxLayout.Y_AXIS));
-        tasksPanel.setBackground(CARD_COLOR);
-            
-            dayCell.add(dateLabel, BorderLayout.NORTH);
-            dayCell.add(tasksPanel, BorderLayout.CENTER);
-            
-            calendarGrid.add(dayCell);
-        }
-        
-        panel.add(calendarGrid, BorderLayout.CENTER);
-        
-        // Save panel reference first, then initialize calendar
-        // Don't call updateCalendar here to avoid the circular dependency
-        
-        return panel;
-    }
     
-    /**
-     * Updates the calendar display with the current month
-     */
-    private void updateCalendar() {
-        monthLabel.setText(monthFormat.format(currentCalendar.getTime()));
-        
-        // Get tasks for the month INCLUDING generated occurrences
-        Calendar cal = (Calendar) currentCalendar.clone();
-        cal.set(Calendar.DAY_OF_MONTH, 1);
-        
-        // Determine first day of month and adjust for week display
-        int firstDayOfMonth = cal.get(Calendar.DAY_OF_WEEK) - 1;
-        
-        // Reset calendar grid - get it directly from calendarPanel instead of using hardcoded index
-        JPanel calendarGrid = (JPanel) calendarPanel.getComponent(1);
-        
-        // Clear all cells
-        for (Component comp : calendarGrid.getComponents()) {
-            JPanel dayCell = (JPanel) comp;
-            if (dayCell.getComponentCount() >= 2) {
-                JLabel dateLabel = (JLabel) dayCell.getComponent(0);
-                JPanel tasksPanel = (JPanel) dayCell.getComponent(1);
-                
-                dateLabel.setText("");
-                tasksPanel.removeAll();
-                dayCell.setBackground(CARD_COLOR);
-            }
-        }
-        
-        // Get days in month
-        int daysInMonth = cal.getActualMaximum(Calendar.DAY_OF_MONTH);
-        
-        // Get today's date for highlighting
-        Calendar today = Calendar.getInstance();
-        
-        // Load fresh data from the database WITH RECURRING OCCURRENCES for calendar view
-        List<Task> tasksWithOccurrences = TaskController.getTasksWithOccurrences(userId);
-        
-        // Fill calendar with dates
-        for (int i = 0; i < daysInMonth; i++) {
-            if (firstDayOfMonth + i >= calendarGrid.getComponentCount()) {
-                continue; // Skip if out of bounds
-            }
-            
-            JPanel dayCell = (JPanel) calendarGrid.getComponent(firstDayOfMonth + i);
-            if (dayCell.getComponentCount() < 2) continue;
-            
-            JLabel dateLabel = (JLabel) dayCell.getComponent(0);
-            JPanel tasksPanel = (JPanel) dayCell.getComponent(1);
-            
-            tasksPanel.setLayout(new BoxLayout(tasksPanel, BoxLayout.Y_AXIS));
-            
-            // Set date label
-            int day = i + 1;
-            dateLabel.setText(String.valueOf(day));
-            
-            // Highlight today's date
-            if (currentCalendar.get(Calendar.YEAR) == today.get(Calendar.YEAR) &&
-                currentCalendar.get(Calendar.MONTH) == today.get(Calendar.MONTH) &&
-                day == today.get(Calendar.DAY_OF_MONTH)) {
-                dateLabel.setForeground(PRIMARY_COLOR);
-                dateLabel.setFont(new Font("Segoe UI", Font.BOLD, 12));
-            } else {
-                dateLabel.setForeground(TEXT_COLOR);
-                dateLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-            }
-            
-            // Add tasks for this day
-            for (Task task : tasksWithOccurrences) {
-                // Skip tasks without due dates
-                if (task.getDueDate() == null) continue;
-                
-                try {
-                    // Check if task is on this day
-                    Calendar taskDate = Calendar.getInstance();
-                    taskDate.setTime(task.getDueDate());
-                    
-                    if (taskDate.get(Calendar.YEAR) == currentCalendar.get(Calendar.YEAR) &&
-                        taskDate.get(Calendar.MONTH) == currentCalendar.get(Calendar.MONTH) &&
-                        taskDate.get(Calendar.DAY_OF_MONTH) == day) {
-                        
-                        // Create a panel for this task
-                        JPanel taskPanel = new JPanel(new BorderLayout());
-                        taskPanel.setBorder(BorderFactory.createEmptyBorder(1, 0, 1, 0));
-                        taskPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 25));
-                        
-                        // Determine color based on status and priority
-                        Color taskColor;
-                        String status = task.getStatus() != null ? task.getStatus().toLowerCase() : "";
-                        String priority = task.getPriority();
-                        
-                        // Priorité élevée (URGENT ou HIGH) a préséance sur le statut pour la couleur
-                        if (priority != null && ("URGENT".equals(priority) || "HIGH".equals(priority))) {
-                            taskColor = "URGENT".equals(priority) ? URGENT_PRIORITY_COLOR : HIGH_PRIORITY_COLOR;
-                        } else if (status.contains("completed") || status.equals("done")) {
-                            taskColor = COMPLETED_COLOR; // Green
-                        } else if (status.contains("pending") || status.equals("waiting")) {
-                            taskColor = PENDING_STATUS_COLOR; // Gray
-                        } else if (status.contains("progress") || status.equals("in progress")) {
-                            taskColor = IN_PROGRESS_COLOR; // Orange
-                        } else {
-                            taskColor = IN_PROGRESS_COLOR; // Default to orange for any other status
-                        }
-                        
-                        // Create a color bar on the left
-                        JPanel colorBar = new JPanel();
-                        colorBar.setBackground(taskColor);
-                        colorBar.setPreferredSize(new Dimension(3, 0));
-                        
-                        // Create the task label with priority indicator
-                        JPanel labelPanel = new JPanel(new BorderLayout(5, 0));
-                        labelPanel.setBackground(taskPanel.getBackground());
-                        
-                        JLabel taskLabel = new JLabel(task.getTitle());
-                        taskLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-                        taskLabel.setForeground(TEXT_COLOR);
-                        taskLabel.setBorder(BorderFactory.createEmptyBorder(2, 5, 2, 5));
-                        
-                        // Ajouter l'indicateur de priorité si présent
-                        if (priority != null && !"NORMAL".equals(priority)) {
-                            JLabel priorityLabel = new JLabel();
-                            priorityLabel.setIcon(createPriorityIcon(priority));
-                            labelPanel.add(priorityLabel, BorderLayout.EAST);
-                        }
-                        
-                        labelPanel.add(taskLabel, BorderLayout.CENTER);
-                        
-                        // Add a background color based on status (with transparency)
-                        Color bgColor = new Color(
-                            taskColor.getRed(),
-                            taskColor.getGreen(),
-                            taskColor.getBlue(),
-                            30); // Light transparency
-                        taskPanel.setBackground(bgColor);
-                        
-                        // Add components to task panel
-                        taskPanel.add(colorBar, BorderLayout.WEST);
-                        taskPanel.add(labelPanel, BorderLayout.CENTER);
-                        
-                        // Make task panel clickable to view task details
-                        final Task finalTask = task;
-                        taskPanel.addMouseListener(new MouseAdapter() {
-                            @Override
-                            public void mouseClicked(MouseEvent e) {
-                                // Use the task ID to get a fresh copy of the task from the database
-                                Task freshTask = TaskController.getTaskById(finalTask.getTaskId());
-                                if (freshTask != null) {
-                                    // Find the task in the list model
-                                    for (int k = 0; k < taskListModel.getSize(); k++) {
-                                        if (taskListModel.getElementAt(k).getTaskId() == freshTask.getTaskId()) {
-                                            taskList.setSelectedIndex(k);
-                                            break;
-                                        }
-                                    }
-                                    displayTaskDetails(freshTask);
-                                }
-                            }
-                        });
-                        
-                        // Add task to the day cell
-                        tasksPanel.add(taskPanel);
-                    }
-                } catch (Exception e) {
-                    System.out.println("Error displaying task in calendar: " + e.getMessage());
-                }
-            }
-            
-            tasksPanel.revalidate();
-            tasksPanel.repaint();
-        }
-        
-        // Ensure the entire calendar is properly refreshed
-        calendarGrid.revalidate();
-        calendarGrid.repaint();
-    }
+    
+    
 
     /**
      * Switches the main panel to show the requested view
      */
-    private void showPanel(String name) {
+    public void showPanel(String name) {
         CardLayout cl = (CardLayout) mainContentPanel.getLayout();
         cl.show(mainContentPanel, name);
         
         // Update button states
         switch (name) {
             case "TASKS":
-                // Find the Tasks button in navigation panel
-                for (Component c : navigationPanel.getComponents()) {
-                    if (c instanceof JButton && ((JButton)c).getText().contains("Tasks")) {
-                        updateSelectedButton((JButton)c);
-                        break;
-                    }
-                }
+                sidebarPanel.updateSelectedButton("TASKS");
                 // Show the task list view by default
                 showTaskListView();
                 break;
             case "POMODORO":
-                if (pomodoroButton != null) {
-                    updateSelectedButton(pomodoroButton);
-                }
+                sidebarPanel.updateSelectedButton("POMODORO");
                 break;
             case "DASHBOARD":
-                if (dashboardButton != null) {
-                    updateSelectedButton(dashboardButton);
-                    updateDashboard(); // Refresh dashboard data
-                }
+                sidebarPanel.updateSelectedButton("DASHBOARD");
+                updateDashboard(); // Refresh dashboard data
                 break;
             case "CALENDAR":
-                if (calendarButton != null) {
-                    updateSelectedButton(calendarButton);
-                }
-                // Only update calendar if it's not null
-                if (calendarPanel != null) {
-                    updateCalendar(); // Refresh calendar data
-                }
+                sidebarPanel.updateSelectedButton("CALENDAR");
+                // Update calendar data using the CalendarPanel's method
+                ((CalendarPanel) calendarPanel).updateCalendar();
                 break;
             case "NOTES":
-                // Handle notes view if we have one
-                JButton notesButton = null;
-                // Try to find the notes button in the navigation panel
-                for (Component c : navigationPanel.getComponents()) {
-                    if (c instanceof JButton && ((JButton)c).getText().contains("Notes")) {
-                        notesButton = (JButton)c;
-                        break;
-                    }
-                }
-                if (notesButton != null) {
-                    updateSelectedButton(notesButton);
-                }
+                sidebarPanel.updateSelectedButton("NOTES");
                 // Show the notes list view by default
                 showNotesListView();
                 break;
@@ -3219,17 +2839,13 @@ public class TaskFrame extends JFrame {
         }
     }
     
-    /**
-     * Handles updating an existing task
-     */
-        private void handleUpdateTask() {        Task selectedTask = taskList.getSelectedValue();        if (selectedTask == null) {            JOptionPane.showMessageDialog(this, "No task selected!", "Warning", JOptionPane.WARNING_MESSAGE);                return;            }                    String title = titleField.getText().trim();        String description = descriptionField.getText().trim();        String status = (String) statusComboBox.getSelectedItem();        String priority = (String) priorityComboBox.getSelectedItem();        Date dueDate = (Date) dueDateSpinner.getValue();        Category selectedCategory = (Category) categoryComboBox.getSelectedItem();
+        /**     * Updates the current task     */    private void handleUpdateTask() {        Task selectedTask = taskList.getSelectedValue();        if (selectedTask == null) {            JOptionPane.showMessageDialog(this, "No task selected!", "Warning", JOptionPane.WARNING_MESSAGE);            return;        }                        String title = titleField.getText().trim();        String description = descriptionField.getText().trim();        String status = (String) statusComboBox.getSelectedItem();        String priority = (String) priorityComboBox.getSelectedItem();        Date dueDate = (Date) dueDateSpinner.getValue();        Category selectedCategory = (Category) categoryComboBox.getSelectedItem();
 
         // Get recurrence settings
         boolean isRecurring = isRecurringCheckBox.isSelected();
         String recurrenceType = isRecurring ? (String) recurrenceTypeComboBox.getSelectedItem() : null;
         int recurrenceInterval = isRecurring ? (int) recurrenceIntervalSpinner.getValue() : 0;
         Date recurrenceEndDate = isRecurring ? (Date) recurrenceEndDateSpinner.getValue() : null;
-
 
         if (title.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Title cannot be empty!", "Invalid Input", JOptionPane.WARNING_MESSAGE);
@@ -3238,15 +2854,48 @@ public class TaskFrame extends JFrame {
 
         boolean success;
         if (selectedCategory != null && selectedCategory.getId() != 0) {
-                        success = TaskController.updateTask(                selectedTask.getTaskId(),                 title,                 description,                 status,                 dueDate,                 selectedCategory,                isRecurring,                recurrenceType,                recurrenceInterval,                recurrenceEndDate,                priority            );
+            success = TaskController.updateTask(
+                selectedTask.getTaskId(),
+                title,
+                description,
+                status,
+                dueDate,
+                selectedCategory,
+                isRecurring,
+                recurrenceType,
+                recurrenceInterval,
+                recurrenceEndDate,
+                priority
+            );
         } else {
-                        success = TaskController.updateTask(                selectedTask.getTaskId(),                 title,                 description,                 status,                 dueDate,                isRecurring,                recurrenceType,                recurrenceInterval,                recurrenceEndDate,                priority            );
+            success = TaskController.updateTask(
+                selectedTask.getTaskId(),
+                title,
+                description,
+                status,
+                dueDate,
+                isRecurring,
+                recurrenceType,
+                recurrenceInterval,
+                recurrenceEndDate,
+                priority
+            );
         }
         
         if (success) {
             loadTasks();
             updateDashboard();
-            updateCalendar(); // Update calendar to reflect the changes
+            ((CalendarPanel) calendarPanel).updateCalendar(); // Update calendar to reflect the changes
+            
+            // Select the task we just updated in the list
+            for (int i = 0; i < taskListModel.getSize(); i++) {
+                Task task = taskListModel.getElementAt(i);
+                if (task.getTaskId() == selectedTask.getTaskId()) {
+                    taskList.setSelectedValue(task, true);
+                    break;
+                }
+            }
+            
             showTaskListView();
         } else {
             JOptionPane.showMessageDialog(this, "Failed to update task!", "Error", JOptionPane.ERROR_MESSAGE);
@@ -3287,7 +2936,13 @@ public class TaskFrame extends JFrame {
     /**
      * Handles adding a new task
      */
-        private void handleAddTask() {        String title = titleField.getText().trim();        String description = descriptionField.getText().trim();        String status = (String) statusComboBox.getSelectedItem();        String priority = (String) priorityComboBox.getSelectedItem();        Date dueDate = (Date) dueDateSpinner.getValue();        Category selectedCategory = (Category) categoryComboBox.getSelectedItem();
+    private void handleAddTask() {
+        String title = titleField.getText().trim();
+        String description = descriptionField.getText().trim();
+        String status = (String) statusComboBox.getSelectedItem();
+        String priority = (String) priorityComboBox.getSelectedItem();
+        Date dueDate = (Date) dueDateSpinner.getValue();
+        Category selectedCategory = (Category) categoryComboBox.getSelectedItem();
         
         // Get recurrence settings
         boolean isRecurring = isRecurringCheckBox.isSelected();
@@ -3323,19 +2978,115 @@ public class TaskFrame extends JFrame {
             return;
         }
         
+        // Get selected task (if we're already editing a task)
+        Task selectedTask = taskList.getSelectedValue();
         boolean success;
-        if (selectedCategory != null && selectedCategory.getId() != 0) {
-                        success = TaskController.createTask(                userId,                 title,                 description,                 status,                 dueDate,                 selectedCategory,                isRecurring,                recurrenceType,                recurrenceInterval,                recurrenceEndDate,                maxOccurrences,                dayOfWeek,                dayOfMonth,                monthOfYear,                priority            );
+        
+        // If we have a selected task, update it instead of creating a new one
+        if (selectedTask != null) {
+            if (selectedCategory != null && selectedCategory.getId() != 0) {
+                success = TaskController.updateTask(
+                    selectedTask.getTaskId(),
+                    title,
+                    description,
+                    status,
+                    dueDate,
+                    selectedCategory,
+                    isRecurring,
+                    recurrenceType,
+                    recurrenceInterval,
+                    recurrenceEndDate,
+                    priority
+                );
+            } else {
+                success = TaskController.updateTask(
+                    selectedTask.getTaskId(),
+                    title,
+                    description,
+                    status,
+                    dueDate,
+                    isRecurring,
+                    recurrenceType,
+                    recurrenceInterval,
+                    recurrenceEndDate,
+                    priority
+                );
+            }
         } else {
-                        success = TaskController.createTask(                userId,                 title,                 description,                 status,                 dueDate,                isRecurring,                recurrenceType,                recurrenceInterval,                recurrenceEndDate,                maxOccurrences,                dayOfWeek,                dayOfMonth,                monthOfYear,                priority            );
+            // Create new task since we don't have a selected task
+            if (selectedCategory != null && selectedCategory.getId() != 0) {
+                success = TaskController.createTask(
+                    userId,
+                    title,
+                    description,
+                    status,
+                    dueDate,
+                    selectedCategory,
+                    isRecurring,
+                    recurrenceType,
+                    recurrenceInterval,
+                    recurrenceEndDate,
+                    maxOccurrences,
+                    dayOfWeek,
+                    dayOfMonth,
+                    monthOfYear,
+                    priority
+                );
+            } else {
+                success = TaskController.createTask(
+                    userId,
+                    title,
+                    description,
+                    status,
+                    dueDate,
+                    isRecurring,
+                    recurrenceType,
+                    recurrenceInterval,
+                    recurrenceEndDate,
+                    maxOccurrences,
+                    dayOfWeek,
+                    dayOfMonth,
+                    monthOfYear,
+                    priority
+                );
+            }
+            
+            // If task creation was successful, find and select the newly created task
+            if (success) {
+                loadTasks();
+                // Try to find and select the newly created task
+                for (int i = 0; i < taskListModel.getSize(); i++) {
+                    Task task = taskListModel.getElementAt(i);
+                    if (task.getTitle().equals(title) && 
+                        ((task.getDescription() == null && description.isEmpty()) || 
+                         (task.getDescription() != null && task.getDescription().equals(description)))) {
+                        // Select this task in the list
+                        taskList.setSelectedValue(task, true);
+                        selectedTask = task;
+                        break;
+                    }
+                }
+            }
         }
         
         if (success) {
             loadTasks();
-            clearFields();
             updateDashboard();
-            updateCalendar(); // Update calendar to reflect the changes
+            ((CalendarPanel) calendarPanel).updateCalendar(); // Update calendar to reflect the changes
+            
+            // If we have a selected task (either existing or newly created), select it in the list
+            if (selectedTask != null) {
+                for (int i = 0; i < taskListModel.getSize(); i++) {
+                    Task task = taskListModel.getElementAt(i);
+                    if (task.getTaskId() == selectedTask.getTaskId()) {
+                        taskList.setSelectedValue(task, true);
+                        break;
+                    }
+                }
+            }
+            
             showTaskListView();
+            clearFields(); // Clear fields after showing task list to prevent duplicate creations
         } else {
             JOptionPane.showMessageDialog(this, "Failed to add task!", "Error", JOptionPane.ERROR_MESSAGE);
         }
@@ -3945,8 +3696,32 @@ public class TaskFrame extends JFrame {
             // Create new note
             if (selectedCategory != null) {
                 success = NoteController.createNote(userId, title, content, selectedCategory);
+                
+                // If we successfully created a note, let's find it to set as current note
+                if (success) {
+                    loadNotes(); // Reload to get the fresh list with the new note
+                    for (int i = 0; i < notesListModel.size(); i++) {
+                        Note note = notesListModel.getElementAt(i);
+                        if (note.getTitle().equals(title) && note.getContent().equals(content)) {
+                            currentNote = note; // Set as current note to allow updates instead of new creation
+                            break;
+                        }
+                    }
+                }
             } else {
                 success = NoteController.createNote(userId, title, content);
+                
+                // If we successfully created a note, let's find it to set as current note
+                if (success) {
+                    loadNotes(); // Reload to get the fresh list with the new note
+                    for (int i = 0; i < notesListModel.size(); i++) {
+                        Note note = notesListModel.getElementAt(i);
+                        if (note.getTitle().equals(title) && note.getContent().equals(content)) {
+                            currentNote = note; // Set as current note to allow updates instead of new creation
+                            break;
+                        }
+                    }
+                }
             }
         } else {
             // Update existing note
@@ -3959,8 +3734,18 @@ public class TaskFrame extends JFrame {
         
         if (success) {
             loadNotes(); // Refresh the list
-            JOptionPane.showMessageDialog(this, "Note saved successfully", "Success", JOptionPane.INFORMATION_MESSAGE);
-            showNotesListView();
+            showNotesListView(); // Go back to notes list view immediately without creating a new note
+            
+            // Select the note we just saved/created in the list
+            if (currentNote != null) {
+                for (int i = 0; i < notesListModel.size(); i++) {
+                    Note note = notesListModel.getElementAt(i);
+                    if (note.getNoteId() == currentNote.getNoteId()) {
+                        notesList.setSelectedValue(note, true);
+                        break;
+                    }
+                }
+            }
         } else {
             JOptionPane.showMessageDialog(this, "Failed to save note", "Error", JOptionPane.ERROR_MESSAGE);
         }
@@ -4322,20 +4107,7 @@ public class TaskFrame extends JFrame {
         };
     }
 
-    private void logout() {
-        int choice = JOptionPane.showConfirmDialog(
-            this,
-            "Are you sure you want to logout?",
-            "Confirm Logout",
-            JOptionPane.YES_NO_OPTION,
-            JOptionPane.QUESTION_MESSAGE
-        );
-        
-        if (choice == JOptionPane.YES_OPTION) {
-            dispose();
-            new UserSelectionView(username -> new LoginView(username).setVisible(true)).setVisible(true);
-        }
-    }
+    /**     * Handles logout action     */    public void logout() {        int choice = JOptionPane.showConfirmDialog(            this,            "Are you sure you want to logout?",            "Confirm Logout",            JOptionPane.YES_NO_OPTION,            JOptionPane.QUESTION_MESSAGE        );                        if (choice == JOptionPane.YES_OPTION) {            dispose();            new UserSelectionView(username -> new LoginView(username).setVisible(true)).setVisible(true);        }    }
 
     private Icon createBulletIcon() {
         return new Icon() {
