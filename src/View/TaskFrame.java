@@ -21,11 +21,11 @@ import java.awt.Toolkit;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
-import java.util.ArrayList;
-import java.util.Collections;
 
 import javax.swing.BorderFactory;
 import javax.swing.Box;
@@ -56,19 +56,18 @@ import javax.swing.SpinnerModel;
 import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingConstants;
 import javax.swing.Timer;
-import javax.swing.UIManager;
 import javax.swing.border.EmptyBorder;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 
 import Controller.CategoryController;
-import Controller.TaskController;
+import Controller.NoteController;
 import Controller.SubTaskController;
+import Controller.TaskController;
 import Model.Category;
-import Model.Task;
 import Model.Note;
 import Model.SubTask;
-import Controller.NoteController;
+import Model.Task;
 
 public class TaskFrame extends JFrame {
     private int userId;
@@ -2460,6 +2459,51 @@ public class TaskFrame extends JFrame {
         }
     }
     
+    /**
+     * Loads tasks filtered by category
+     * @param categoryId The ID of the category to filter by
+     */
+    private void loadTasksByCategory(int categoryId) {
+        taskListModel.clear();
+        
+        try {
+            // Get tasks filtered by category
+            List<Task> tasks = TaskController.getTasksByCategory(userId, categoryId);
+            
+            // Sort tasks by priority and status (same as in loadTasks method)
+            Collections.sort(tasks, (t1, t2) -> {
+                // First compare status (Pending and In Progress before Completed)
+                boolean t1Completed = "Completed".equalsIgnoreCase(t1.getStatus());
+                boolean t2Completed = "Completed".equalsIgnoreCase(t2.getStatus());
+                
+                if (t1Completed && !t2Completed) return 1;
+                if (!t1Completed && t2Completed) return -1;
+                
+                // Then compare priorities
+                String p1 = t1.getPriority() != null ? t1.getPriority() : "NORMAL";
+                String p2 = t2.getPriority() != null ? t2.getPriority() : "NORMAL";
+                
+                // Priority order: URGENT > HIGH > NORMAL > LOW
+                int p1Value = getPriorityValue(p1);
+                int p2Value = getPriorityValue(p2);
+                
+                return Integer.compare(p1Value, p2Value);
+            });
+            
+            // Add each task to the list model
+            for (Task task : tasks) {
+                taskListModel.addElement(task);
+            }
+            
+            // Refresh the dashboard and calendar views if needed
+            if (dashboardPanel != null) {
+                updateDashboard();
+            }
+        } catch (Exception e) {
+            System.out.println("Error loading tasks by category: " + e.getMessage());
+        }
+    }
+    
     // Méthode d'aide pour attribuer une valeur numérique à chaque priorité pour le tri
     private int getPriorityValue(String priority) {
         switch (priority) {
@@ -2530,10 +2574,10 @@ public class TaskFrame extends JFrame {
         
         headerPanel.add(titleButtonPanel, BorderLayout.NORTH);
         
-        // Search field below the title
+        // Search field
         JPanel searchPanel = new JPanel(new BorderLayout(5, 0));
         searchPanel.setBackground(SIDEBAR_COLOR);
-        searchPanel.setBorder(new EmptyBorder(15, 0, 0, 0));
+        searchPanel.setBorder(new EmptyBorder(10, 0, 0, 0));
         
         JLabel searchLabel = new JLabel("Search:");
         searchLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
@@ -2547,12 +2591,12 @@ public class TaskFrame extends JFrame {
             public void insertUpdate(DocumentEvent e) {
                 filterTasks(searchField.getText());
             }
-
+            
             @Override
             public void removeUpdate(DocumentEvent e) {
                 filterTasks(searchField.getText());
             }
-
+            
             @Override
             public void changedUpdate(DocumentEvent e) {
                 filterTasks(searchField.getText());
@@ -2560,9 +2604,39 @@ public class TaskFrame extends JFrame {
         });
         
         searchPanel.add(searchField, BorderLayout.CENTER);
-        
         headerPanel.add(searchPanel, BorderLayout.CENTER);
-
+        
+        // Filter panel with smaller control like in notes (now below the search)
+        JPanel filterPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
+        filterPanel.setBackground(SIDEBAR_COLOR);
+        
+        JLabel filterLabel = new JLabel("Filter:");
+        filterLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        filterPanel.add(filterLabel);
+        
+        JComboBox<Category> filterComboBox = new JComboBox<>();
+        filterComboBox.addItem(new Category(0, "All Tasks"));
+        
+        // Load categories
+        List<Category> categories = CategoryController.getAllCategories();
+        for (Category category : categories) {
+            filterComboBox.addItem(category);
+        }
+        
+        filterComboBox.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        filterComboBox.setPreferredSize(new Dimension(120, 25));
+        filterComboBox.addActionListener(e -> {
+            Category selectedCategory = (Category) filterComboBox.getSelectedItem();
+            if (selectedCategory.getId() == 0) {
+                loadTasks(); // Load all tasks
+            } else {
+                loadTasksByCategory(selectedCategory.getId()); // Load tasks by category
+            }
+        });
+        
+        filterPanel.add(filterComboBox);
+        headerPanel.add(filterPanel, BorderLayout.SOUTH);
+        
         // Task list with custom renderer
         taskList.setBackground(SIDEBAR_COLOR);
         taskList.setBorder(null);
@@ -3155,6 +3229,7 @@ public class TaskFrame extends JFrame {
         String recurrenceType = isRecurring ? (String) recurrenceTypeComboBox.getSelectedItem() : null;
         int recurrenceInterval = isRecurring ? (int) recurrenceIntervalSpinner.getValue() : 0;
         Date recurrenceEndDate = isRecurring ? (Date) recurrenceEndDateSpinner.getValue() : null;
+
 
         if (title.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Title cannot be empty!", "Invalid Input", JOptionPane.WARNING_MESSAGE);
