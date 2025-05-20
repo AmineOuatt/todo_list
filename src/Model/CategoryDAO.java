@@ -13,6 +13,8 @@ public class CategoryDAO {
     // Get all categories
     public static List<Category> getAllCategories() {
         List<Category> categories = new ArrayList<>();
+        // Query to get all categories
+        // Simple SELECT to retrieve all category records
         String query = "SELECT * FROM categories";
 
         try (Connection conn = DatabaseConnection.getConnection();
@@ -33,6 +35,7 @@ public class CategoryDAO {
 
     // Get category by ID
     public static Category getCategoryById(int categoryId) {
+        // Query to get a specific category by its ID
         String query = "SELECT * FROM categories WHERE id = ?";
 
         try (Connection conn = DatabaseConnection.getConnection();
@@ -54,6 +57,8 @@ public class CategoryDAO {
 
     // Get category by name
     public static Category getCategoryByName(String categoryName) {
+        // Query to get a category by its name
+        // Useful for checking if a category already exists
         String query = "SELECT * FROM categories WHERE name = ?";
 
         try (Connection conn = DatabaseConnection.getConnection();
@@ -75,6 +80,8 @@ public class CategoryDAO {
 
     // Insert a new category
     public static Category insertCategory(String name) {
+        // Query to insert a new category
+        // Only requires the category name
         String query = "INSERT INTO categories (name) VALUES (?)";
         
         try (Connection conn = DatabaseConnection.getConnection();
@@ -100,6 +107,8 @@ public class CategoryDAO {
 
     // Update category
     public static boolean updateCategory(Category category) {
+        // Query to update an existing category
+        // Updates only the name field for a specific category ID
         String query = "UPDATE categories SET name = ? WHERE id = ?";
 
         try (Connection conn = DatabaseConnection.getConnection();
@@ -116,6 +125,7 @@ public class CategoryDAO {
 
     // Delete category
     public static boolean deleteCategory(int categoryId) {
+        // Query to delete a category by its ID
         String query = "DELETE FROM categories WHERE id = ?";
 
         try (Connection conn = DatabaseConnection.getConnection();

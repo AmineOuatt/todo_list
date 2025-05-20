@@ -1,6 +1,10 @@
 package Model;
 
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -8,6 +12,8 @@ public class UserDAO {
     // Method to fetch all users with IDs
     public static List<User> getAllUsers() {
         List<User> users = new ArrayList<>();
+        // Query to get all users
+        // Retrieves only user_id and username for security
         try (Connection conn = DatabaseConnection.getConnection();
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery("SELECT user_id, username FROM Users")) {
@@ -75,6 +81,8 @@ public class UserDAO {
     // Method to update user
     public static boolean updateUser(int userId, String newUsername, String newPassword) {
         try (Connection conn = DatabaseConnection.getConnection()) {
+            // Query to update user information
+            // Can update both username and password, or just username
             if (newPassword != null && !newPassword.isEmpty()) {
                 // Update both username and password
                 PreparedStatement stmt = conn.prepareStatement(
@@ -115,6 +123,8 @@ public class UserDAO {
 
     public static User getUserByUsername(String username) {
         String query = "SELECT user_id, username, password_hash FROM Users WHERE username = ?";
+        // Query to get a user by their username
+        // Retrieves complete user information including password hash
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(query)) {
             

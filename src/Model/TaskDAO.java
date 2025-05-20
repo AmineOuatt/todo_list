@@ -5,7 +5,6 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -16,6 +15,9 @@ public class TaskDAO {
     // Fetch tasks for a user
     public static List<Task> getTasksByUserId(int userId) {
         List<Task> tasks = new ArrayList<>();
+        // Query to get all tasks for a specific user
+        // Joins with categories and recurring_patterns tables to get complete task information
+        // Includes category details and recurring pattern information if task is recurring
         String query = "SELECT t.*, c.id as category_id, c.name as category_name, " +
                       "rp.pattern_type, rp.interval_value, rp.day_of_week, rp.day_of_month, " +
                       "rp.month_of_year, rp.end_date, rp.max_occurrences " +
@@ -93,6 +95,8 @@ public class TaskDAO {
 
     // Get task by ID
     public static Task getTaskById(int taskId) {
+        // Query to get a specific task by its ID
+        // Joins with categories and recurring_patterns tables to get complete task information
         String query = "SELECT t.*, c.id as category_id, c.name as category_name, " +
                       "rp.pattern_type, rp.interval_value, rp.day_of_week, rp.day_of_month, " +
                       "rp.month_of_year, rp.end_date, rp.max_occurrences " +
@@ -173,6 +177,8 @@ public class TaskDAO {
             
             // If task is recurring, first create the pattern
             if (task.isRecurring()) {
+                // Query to insert a new recurring pattern
+                // Stores pattern type, interval, end date, and optional parameters for recurring tasks
                 String patternQuery = "INSERT INTO recurring_patterns (pattern_type, interval_value, end_date, max_occurrences, day_of_week, day_of_month, month_of_year) VALUES (?, ?, ?, ?, ?, ?, ?)";
                 stmtPattern = conn.prepareStatement(patternQuery, Statement.RETURN_GENERATED_KEYS);
                 stmtPattern.setString(1, task.getRecurrenceType());
@@ -219,6 +225,8 @@ public class TaskDAO {
             }
             
             // Now insert the task
+            // Query to insert a new task
+            // Stores task details including user_id, title, description, due date, status, category, and recurring information
             String taskQuery = "INSERT INTO Tasks (user_id, title, description, due_date, status, category_id, is_recurring, recurring_pattern_id, parent_task_id, priority) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
             stmtTask = conn.prepareStatement(taskQuery);
             stmtTask.setInt(1, task.getUserId());
@@ -475,6 +483,7 @@ public class TaskDAO {
 
     // Delete task
     public static boolean deleteTask(int taskId) {
+        // Query to delete a task by its ID
         String query = "DELETE FROM Tasks WHERE task_id = ?";
 
         try (Connection conn = DatabaseConnection.getConnection();
@@ -490,6 +499,8 @@ public class TaskDAO {
 
     // Update task status
     public static boolean updateTaskStatus(int taskId, String status) {
+        // Query to update task status
+        // Updates only the status field for a specific task
         String query = "UPDATE Tasks SET status = ? WHERE task_id = ?";
 
         try (Connection conn = DatabaseConnection.getConnection();
@@ -507,6 +518,9 @@ public class TaskDAO {
     // Get tasks by category
     public static List<Task> getTasksByCategory(int userId, int categoryId) {
         List<Task> tasks = new ArrayList<>();
+        // Query to get tasks by category for a specific user
+        // Joins with categories and recurring_patterns tables
+        // Filters by both user_id and category_id
         String query = "SELECT t.*, c.id as category_id, c.name as category_name, " +
                       "rp.pattern_type, rp.interval_value, rp.day_of_week, rp.day_of_month, " +
                       "rp.month_of_year, rp.end_date, rp.max_occurrences " +
