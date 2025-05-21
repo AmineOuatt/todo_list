@@ -1,6 +1,5 @@
 package View;
 
-import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Cursor;
@@ -53,7 +52,7 @@ public class SidebarPanel extends JPanel {
         setPreferredSize(new Dimension(220, getPreferredSize().height));
 
         // Add logo/brand at the top
-        JLabel logoLabel = new JLabel("TaskFrame");
+        JLabel logoLabel = new JLabel("Todo List");
         logoLabel.setFont(new Font("Segoe UI", Font.BOLD, 22));
         logoLabel.setForeground(PRIMARY_COLOR);
         logoLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -101,21 +100,14 @@ public class SidebarPanel extends JPanel {
         add(Box.createVerticalStrut(20));
 
         // Add logout button at the bottom
-        JButton logoutButton = new JButton();
-        logoutButton.setLayout(new BorderLayout(10, 0));
-        
-        // Icon will be set in TaskFrame
-        
-        // Create text label
-        JLabel textLabel = new JLabel("Logout");
-        textLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        textLabel.setForeground(new Color(255, 89, 89));
-        
-        logoutButton.add(textLabel, BorderLayout.CENTER);
+        JButton logoutButton = new JButton("Logout");
+        logoutButton.setFont(new Font("Segoe UI", Font.PLAIN, 16));
+        logoutButton.setForeground(new Color(255, 89, 89));
         styleNavigationButton(logoutButton);
         
         // Override the default style for logout button
         logoutButton.setBorder(BorderFactory.createEmptyBorder(10, 15, 10, 15));
+        logoutButton.setIconTextGap(10);
         logoutButton.setActionCommand("LOGOUT");
         logoutButton.addActionListener(actionListener);
         add(logoutButton);
@@ -138,6 +130,7 @@ public class SidebarPanel extends JPanel {
         button.setMaximumSize(new Dimension(Integer.MAX_VALUE, button.getPreferredSize().height));
         button.setCursor(new Cursor(Cursor.HAND_CURSOR));
         button.setFocusPainted(false);
+        button.setIconTextGap(12);
 
         button.addMouseListener(new MouseAdapter() {
             @Override
@@ -167,6 +160,11 @@ public class SidebarPanel extends JPanel {
         if (selectedButton != null) {
             selectedButton.setBackground(SIDEBAR_COLOR);
             selectedButton.setForeground(TEXT_COLOR);
+            
+            // Special handling for logout button
+            if ("LOGOUT".equals(selectedButton.getActionCommand())) {
+                selectedButton.setForeground(new Color(255, 89, 89));
+            }
         }
         
         // Find and update the newly selected button
@@ -176,7 +174,14 @@ public class SidebarPanel extends JPanel {
                 JButton button = (JButton) component;
                 if (button.getActionCommand().equals(actionCommand)) {
                     button.setBackground(PRIMARY_COLOR);
-                    button.setForeground(Color.WHITE);
+                    
+                    // Special handling for logout button - keep it red text even when selected
+                    if ("LOGOUT".equals(actionCommand)) {
+                        button.setForeground(new Color(255, 89, 89));
+                    } else {
+                        button.setForeground(Color.WHITE);
+                    }
+                    
                     selectedButton = button; // Keep track of the selected button
                     break;
                 }

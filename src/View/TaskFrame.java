@@ -4115,14 +4115,18 @@ public class TaskFrame extends JFrame {
                 // Door frame
                 g2d.setColor(new Color(255, 89, 89));
                 g2d.setStroke(new BasicStroke(1.5f));
-                g2d.drawRect(x + 2, y, x + 12, y + 16);
+                g2d.drawRect(x + 2, y + 1, 12, 16);
                 
                 // Door handle
-                g2d.fillOval(x + 11, y + 7, 4, 4);
+                g2d.fillOval(x + 10, y + 8, 3, 3);
                 
                 // Arrow
-                int[] xPoints = {x + 2, x + 2, x + 8};
-                int[] yPoints = {y + 6, y + 10, y + 8};
+                g2d.setStroke(new BasicStroke(1.5f));
+                // Arrow shaft
+                g2d.drawLine(x - 2, y + 9, x + 6, y + 9);
+                // Arrow head
+                int[] xPoints = {x + 3, x + 6, x + 3};
+                int[] yPoints = {y + 6, y + 9, y + 12};
                 g2d.fillPolygon(xPoints, yPoints, 3);
                 
                 g2d.dispose();

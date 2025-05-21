@@ -19,7 +19,6 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
-import java.awt.geom.Ellipse2D;
 import java.util.List;
 
 import javax.swing.BorderFactory;
@@ -59,7 +58,7 @@ public class UserSelectionView extends JFrame {
 
     private JPanel usersGrid;
     private UserSelectionViewListener listener;
-
+    
     public UserSelectionView(UserSelectionViewListener listener) {
         this.listener = listener;
         initializeUI();
@@ -233,8 +232,9 @@ public class UserSelectionView extends JFrame {
             );
             userCard.addActionListener(e -> {
                 // When a user card is clicked, open the LoginView with the selected username
-                LoginView loginView = new LoginView(user.getUsername());
-                loginView.setVisible(true);
+                if (listener != null) {
+                    listener.onUserSelected(user.getUsername());
+                }
                 dispose(); // Close this window
             });
             usersGrid.add(userCard);
@@ -333,10 +333,10 @@ public class UserSelectionView extends JFrame {
                 card.setBackground(CARD_COLOR);
             }
         });
-
+        
         return card;
     }
-
+    
     private Color getRandomColor(String seed) {
         int hash = seed.hashCode();
         float hue = (hash & 0xFF) / 255.0f;
