@@ -38,6 +38,7 @@ public class SidebarPanel extends JPanel {
     private JButton tasksButton;
     private JButton notesButton;
     private ActionListener actionListener;
+    private JButton selectedButton; // Track the currently selected button
 
     /**
      * Constructor for SidebarPanel
@@ -48,15 +49,16 @@ public class SidebarPanel extends JPanel {
         
         setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
         setBackground(SIDEBAR_COLOR);
-        setBorder(new EmptyBorder(20, 15, 20, 15));
+        setBorder(new EmptyBorder(30, 25, 30, 25));
+        setPreferredSize(new Dimension(220, getPreferredSize().height));
 
         // Add logo/brand at the top
         JLabel logoLabel = new JLabel("TaskFrame");
-        logoLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        logoLabel.setFont(new Font("Segoe UI", Font.BOLD, 22));
         logoLabel.setForeground(PRIMARY_COLOR);
         logoLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         add(logoLabel);
-        add(Box.createVerticalStrut(25));
+        add(Box.createVerticalStrut(40));
 
         // Create navigation options with custom icons 
         String[] navLabels = {"Tasks", "Pomodoro", "Dashboard", "Calendar", "Notes"};
@@ -71,11 +73,12 @@ public class SidebarPanel extends JPanel {
             button.setActionCommand(navActions[i]);
             button.addActionListener(actionListener);
             add(button);
-            add(Box.createVerticalStrut(5));
+            add(Box.createVerticalStrut(12));
             
             // Store references to these buttons for selection highlighting
             if (i == 0) {
                 tasksButton = button;
+                selectedButton = button; // Default selection is Tasks
             } else if (i == 1) {
                 pomodoroButton = button;
             } else if (i == 2) {
@@ -95,7 +98,7 @@ public class SidebarPanel extends JPanel {
         separator.setBackground(SIDEBAR_COLOR);
         separator.setMaximumSize(new Dimension(Integer.MAX_VALUE, 1));
         add(separator);
-        add(Box.createVerticalStrut(15));
+        add(Box.createVerticalStrut(20));
 
         // Add logout button at the bottom
         JButton logoutButton = new JButton();
@@ -112,10 +115,13 @@ public class SidebarPanel extends JPanel {
         styleNavigationButton(logoutButton);
         
         // Override the default style for logout button
-        logoutButton.setBorder(BorderFactory.createEmptyBorder(8, 12, 8, 12));
+        logoutButton.setBorder(BorderFactory.createEmptyBorder(10, 15, 10, 15));
         logoutButton.setActionCommand("LOGOUT");
         logoutButton.addActionListener(actionListener);
         add(logoutButton);
+        
+        // Set initial selection
+        updateSelectedButton("TASKS");
     }
 
     /**
@@ -123,10 +129,10 @@ public class SidebarPanel extends JPanel {
      * @param button The button to style
      */
     private void styleNavigationButton(JButton button) {
-        button.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        button.setFont(new Font("Segoe UI", Font.PLAIN, 16));
         button.setForeground(TEXT_COLOR);
         button.setBackground(SIDEBAR_COLOR);
-        button.setBorder(BorderFactory.createEmptyBorder(8, 12, 8, 12));
+        button.setBorder(BorderFactory.createEmptyBorder(10, 15, 10, 15));
         button.setHorizontalAlignment(SwingConstants.LEFT);
         button.setAlignmentX(Component.LEFT_ALIGNMENT);
         button.setMaximumSize(new Dimension(Integer.MAX_VALUE, button.getPreferredSize().height));
@@ -136,12 +142,18 @@ public class SidebarPanel extends JPanel {
         button.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseEntered(MouseEvent e) {
-                button.setBackground(HOVER_COLOR);
+                // Only show hover effect if this button is not already selected
+                if (button != selectedButton) {
+                    button.setBackground(HOVER_COLOR);
+                }
             }
 
             @Override
             public void mouseExited(MouseEvent e) {
-                button.setBackground(SIDEBAR_COLOR);
+                // Only revert to original color if this button is not selected
+                if (button != selectedButton) {
+                    button.setBackground(SIDEBAR_COLOR);
+                }
             }
         });
     }
@@ -151,6 +163,13 @@ public class SidebarPanel extends JPanel {
      * @param actionCommand The action command of the selected button
      */
     public void updateSelectedButton(String actionCommand) {
+        // First reset the previously selected button if there is one
+        if (selectedButton != null) {
+            selectedButton.setBackground(SIDEBAR_COLOR);
+            selectedButton.setForeground(TEXT_COLOR);
+        }
+        
+        // Find and update the newly selected button
         Component[] components = getComponents();
         for (Component component : components) {
             if (component instanceof JButton) {
@@ -158,9 +177,8 @@ public class SidebarPanel extends JPanel {
                 if (button.getActionCommand().equals(actionCommand)) {
                     button.setBackground(PRIMARY_COLOR);
                     button.setForeground(Color.WHITE);
-                } else {
-                    button.setBackground(SIDEBAR_COLOR);
-                    button.setForeground(TEXT_COLOR);
+                    selectedButton = button; // Keep track of the selected button
+                    break;
                 }
             }
         }
