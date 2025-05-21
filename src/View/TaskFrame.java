@@ -1663,7 +1663,8 @@ public class TaskFrame extends JFrame {
                 Task selectedTask = taskList.getSelectedValue();
                 SubTask newSubTask = SubTaskController.createAndGetSubTask(selectedTask.getTaskId(), subtaskText);
                 if (newSubTask != null) {
-                    currentSubTasks.add(newSubTask);
+                    // Refresh the entire subtasks list from the database to ensure consistency
+                    currentSubTasks = new ArrayList<>(SubTaskController.getSubTasksByTaskId(selectedTask.getTaskId()));
                     updateSubTasksPanel();
                     newSubTaskField.setText("");
                 }
@@ -1793,8 +1794,13 @@ public class TaskFrame extends JFrame {
             
             if (confirm == JOptionPane.YES_OPTION) {
                 if (SubTaskController.deleteSubTask(subTask.getSubTaskId())) {
-                    currentSubTasks.remove(subTask);
-                    updateSubTasksPanel();
+                    // Get the currently selected task
+                    Task selectedTask = taskList.getSelectedValue();
+                    if (selectedTask != null) {
+                        // Refresh the subtasks list from the database to ensure consistency
+                        currentSubTasks = new ArrayList<>(SubTaskController.getSubTasksByTaskId(selectedTask.getTaskId()));
+                        updateSubTasksPanel();
+                    }
                 }
             }
         });
@@ -1819,12 +1825,17 @@ public class TaskFrame extends JFrame {
 
     // Add a method to update the subtasks panel
     private void updateSubTasksPanel() {
+        // Make sure we clear the panel first
         subTasksPanel.removeAll();
         
-        for (SubTask subTask : currentSubTasks) {
-            subTasksPanel.add(createSubTaskRow(subTask));
+        // If we have subtasks, add them to the panel
+        if (currentSubTasks != null) {
+            for (SubTask subTask : currentSubTasks) {
+                subTasksPanel.add(createSubTaskRow(subTask));
+            }
         }
         
+        // Make sure the panel is properly redrawn
         subTasksPanel.revalidate();
         subTasksPanel.repaint();
     }
@@ -2698,7 +2709,29 @@ public class TaskFrame extends JFrame {
             categoryComboBox.setSelectedIndex(0);
         }
         
-                // Set priority if available        if (task.getPriority() != null) {            for (int i = 0; i < priorityComboBox.getItemCount(); i++) {                String priority = priorityComboBox.getItemAt(i);                if (task.getPriority().equals(priority)) {                    priorityComboBox.setSelectedIndex(i);                    break;                }            }        } else {            // Default to NORMAL priority            for (int i = 0; i < priorityComboBox.getItemCount(); i++) {                if ("NORMAL".equals(priorityComboBox.getItemAt(i))) {                    priorityComboBox.setSelectedIndex(i);                    break;                }            }        }                // Set the current subtasks        currentSubTasks = SubTaskController.getSubTasksByTaskId(task.getTaskId());        updateSubTasksPanel();
+        // Set priority if available
+        if (task.getPriority() != null) {
+            for (int i = 0; i < priorityComboBox.getItemCount(); i++) {
+                String priority = priorityComboBox.getItemAt(i);
+                if (task.getPriority().equals(priority)) {
+                    priorityComboBox.setSelectedIndex(i);
+                    break;
+                }
+            }
+        } else {
+            // Default to NORMAL priority
+            for (int i = 0; i < priorityComboBox.getItemCount(); i++) {
+                if ("NORMAL".equals(priorityComboBox.getItemAt(i))) {
+                    priorityComboBox.setSelectedIndex(i);
+                    break;
+                }
+            }
+        }
+        
+        // Important: Make sure we're completely replacing the currentSubTasks list
+        // instead of just clearing it and adding to it
+        currentSubTasks = new ArrayList<>(SubTaskController.getSubTasksByTaskId(task.getTaskId()));
+        updateSubTasksPanel();
         
         // Enable delete button since a task is selected
         deleteButton.setEnabled(true);
