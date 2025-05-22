@@ -374,6 +374,12 @@ public class TaskFrame extends JFrame {
     public TaskFrame(int userId) {
         this.userId = userId;
         
+        // Initialize break durations
+        shortBreakDuration = 5 * 60;  // 5 minutes in seconds
+        longBreakDuration = 15 * 60;  // 15 minutes in seconds
+        workDuration = 25 * 60;       // 25 minutes in seconds
+        remainingSeconds = workDuration;
+        
         setTitle("Task Manager");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         
@@ -648,35 +654,7 @@ public class TaskFrame extends JFrame {
         }
 
         // Add settings button
-        JButton settingsButton = new JButton("Settings ⚙");
-        settingsButton.setFont(new Font("Segoe UI", Font.BOLD, 16));
-        settingsButton.setForeground(Color.WHITE);
-        settingsButton.setBorderPainted(false);
-        settingsButton.setContentAreaFilled(false);
-        settingsButton.setOpaque(true);
-        settingsButton.setBackground(new Color(255, 255, 255, 30));
-        settingsButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        settingsButton.setBorder(BorderFactory.createEmptyBorder(8, 16, 8, 16));
-        
-        // Create settings popup
-        JPopupMenu settingsPopup = createSettingsPopup();
-        
-        settingsButton.addActionListener(e -> {
-            settingsPopup.show(settingsButton, 
-                             settingsButton.getWidth() - settingsPopup.getPreferredSize().width, 
-                             settingsButton.getHeight());
-        });
-        
-        settingsButton.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                settingsButton.setBackground(new Color(255, 255, 255, 50));
-            }
-            @Override
-            public void mouseExited(MouseEvent e) {
-                settingsButton.setBackground(new Color(255, 255, 255, 30));
-            }
-        });
+        JButton settingsButton = createSettingsButton();
 
         modePanel.add(Box.createHorizontalStrut(10));
         modePanel.add(settingsButton);
@@ -742,7 +720,7 @@ public class TaskFrame extends JFrame {
         settingsPanel.setBorder(new EmptyBorder(15, 15, 15, 15));
 
         // Work duration settings
-        JPanel workDurationPanel = createSettingsRow("Work Duration (minutes):", workDuration);
+        JPanel workDurationPanel = createSettingsRow("Work Duration (minutes):", workDuration / 60);
         JSpinner workSpinner = (JSpinner) workDurationPanel.getComponent(1);
         workSpinner.addChangeListener(e -> {
             workDuration = (Integer) workSpinner.getValue() * 60;
@@ -752,8 +730,8 @@ public class TaskFrame extends JFrame {
             }
         });
 
-        // Short break settings
-        JPanel shortBreakPanel = createSettingsRow("Short Break (minutes):", shortBreakDuration);
+        // Short break settings (default 5 minutes)
+        JPanel shortBreakPanel = createSettingsRow("Short Break (minutes):", shortBreakDuration / 60);
         JSpinner shortBreakSpinner = (JSpinner) shortBreakPanel.getComponent(1);
         shortBreakSpinner.addChangeListener(e -> {
             shortBreakDuration = (Integer) shortBreakSpinner.getValue() * 60;
@@ -763,8 +741,8 @@ public class TaskFrame extends JFrame {
             }
         });
 
-        // Long break settings
-        JPanel longBreakPanel = createSettingsRow("Long Break (minutes):", longBreakDuration);
+        // Long break settings (default 15 minutes)
+        JPanel longBreakPanel = createSettingsRow("Long Break (minutes):", longBreakDuration / 60);
         JSpinner longBreakSpinner = (JSpinner) longBreakPanel.getComponent(1);
         longBreakSpinner.addChangeListener(e -> {
             longBreakDuration = (Integer) longBreakSpinner.getValue() * 60;
@@ -774,16 +752,8 @@ public class TaskFrame extends JFrame {
             }
         });
 
-        // Auto start breaks
-        JPanel autoStartPanel = createCheckboxRow("Auto-start breaks");
-        JCheckBox autoStartCheckbox = (JCheckBox) autoStartPanel.getComponent(0);
-        autoStartCheckbox.setSelected(autoStartBreaks);
-        autoStartCheckbox.addActionListener(e -> {
-            autoStartBreaks = autoStartCheckbox.isSelected();
-        });
-
-        // Auto start pomodoros
-        JPanel autoStartPomodoroPanel = createCheckboxRow("Auto-start pomodoros");
+        // Auto start work timer
+        JPanel autoStartPomodoroPanel = createCheckboxRow("Auto-start work timer");
         JCheckBox autoStartPomodoroCheckbox = (JCheckBox) autoStartPomodoroPanel.getComponent(0);
         autoStartPomodoroCheckbox.setSelected(autoStartPomodoros);
         autoStartPomodoroCheckbox.addActionListener(e -> {
@@ -797,12 +767,43 @@ public class TaskFrame extends JFrame {
         settingsPanel.add(Box.createVerticalStrut(10));
         settingsPanel.add(longBreakPanel);
         settingsPanel.add(Box.createVerticalStrut(15));
-        settingsPanel.add(autoStartPanel);
-        settingsPanel.add(Box.createVerticalStrut(5));
         settingsPanel.add(autoStartPomodoroPanel);
 
         popup.add(settingsPanel);
         return popup;
+    }
+
+    private JButton createSettingsButton() {
+        JButton settingsButton = new JButton("⚙");
+        settingsButton.setFont(new Font("Segoe UI", Font.BOLD, 20));  // Increased font size for better visibility
+        settingsButton.setForeground(Color.WHITE);
+        settingsButton.setBorderPainted(false);
+        settingsButton.setContentAreaFilled(false);
+        settingsButton.setOpaque(false);
+        settingsButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        settingsButton.setBorder(BorderFactory.createEmptyBorder(8, 16, 8, 16));
+        
+        // Create settings popup
+        JPopupMenu settingsPopup = createSettingsPopup();
+        
+        settingsButton.addActionListener(e -> {
+            settingsPopup.show(settingsButton, 
+                             settingsButton.getWidth() - settingsPopup.getPreferredSize().width, 
+                             settingsButton.getHeight());
+        });
+        
+        settingsButton.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                settingsButton.setForeground(new Color(255, 255, 255, 200));
+            }
+            @Override
+            public void mouseExited(MouseEvent e) {
+                settingsButton.setForeground(Color.WHITE);
+            }
+        });
+
+        return settingsButton;
     }
 
     private JButton createModeButton(String text, PomodoroMode mode) {
@@ -811,8 +812,7 @@ public class TaskFrame extends JFrame {
         button.setForeground(Color.WHITE);
         button.setBorderPainted(false);
         button.setContentAreaFilled(false);
-        button.setOpaque(true);
-        button.setBackground(mode == currentMode ? new Color(255, 255, 255, 50) : new Color(0, 0, 0, 0));
+        button.setOpaque(false);  // Changed to false to remove background
         button.setCursor(new Cursor(Cursor.HAND_CURSOR));
         button.setBorder(BorderFactory.createEmptyBorder(8, 16, 8, 16));
         
@@ -820,15 +820,11 @@ public class TaskFrame extends JFrame {
         button.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseEntered(MouseEvent e) {
-                if (mode != currentMode) {
-                    button.setBackground(new Color(255, 255, 255, 30));
-                }
+                button.setForeground(new Color(255, 255, 255, 200));  // Slightly dimmed white on hover
             }
             @Override
             public void mouseExited(MouseEvent e) {
-                if (mode != currentMode) {
-                    button.setBackground(new Color(0, 0, 0, 0));
-                }
+                button.setForeground(Color.WHITE);
             }
         });
         
@@ -858,9 +854,15 @@ public class TaskFrame extends JFrame {
     private void switchMode(PomodoroMode newMode) {
         if (currentMode != newMode) {
             currentMode = newMode;
-            currentPomodoroColor = newMode.color;
             
-            // Set duration based on mode
+            // Set color based on mode
+            if (newMode == PomodoroMode.POMODORO) {
+                currentPomodoroColor = PRIMARY_COLOR;
+            } else {
+                currentPomodoroColor = new Color(128, 128, 128);  // Gray color for breaks
+            }
+            
+            // Set duration based on mode and current settings
             switch (newMode) {
                 case POMODORO:
                     remainingSeconds = workDuration;
@@ -873,7 +875,7 @@ public class TaskFrame extends JFrame {
                     break;
             }
             
-            resetPomodoro();
+            updateTimerLabel();
             updatePomodoroUI();
         }
     }
@@ -925,30 +927,27 @@ public class TaskFrame extends JFrame {
             String message = "Time for a break!";
             JOptionPane.showMessageDialog(this, message, "Timer Complete", JOptionPane.INFORMATION_MESSAGE);
             
+            // Automatically start break after work time is over
             if (pomodoroCount % 4 == 0) {
-                if (autoStartBreaks) {
-                    switchMode(PomodoroMode.LONG_BREAK);
-                    togglePomodoro();
-                } else {
-                    switchMode(PomodoroMode.LONG_BREAK);
-                }
+                // Long break after every 4 pomodoros
+                remainingSeconds = longBreakDuration;  // Set to long break duration
+                switchMode(PomodoroMode.LONG_BREAK);
+                togglePomodoro();  // Start the break timer automatically
             } else {
-                if (autoStartBreaks) {
-                    switchMode(PomodoroMode.SHORT_BREAK);
-                    togglePomodoro();
-                } else {
-                    switchMode(PomodoroMode.SHORT_BREAK);
-                }
+                // Short break after each pomodoro
+                remainingSeconds = shortBreakDuration;  // Set to short break duration
+                switchMode(PomodoroMode.SHORT_BREAK);
+                togglePomodoro();  // Start the break timer automatically
             }
         } else {
             String message = "Break is over, back to work!";
             JOptionPane.showMessageDialog(this, message, "Timer Complete", JOptionPane.INFORMATION_MESSAGE);
             
+            // Reset and start work time after break
+            remainingSeconds = workDuration;
+            switchMode(PomodoroMode.POMODORO);
             if (autoStartPomodoros) {
-                switchMode(PomodoroMode.POMODORO);
-                togglePomodoro();
-            } else {
-                switchMode(PomodoroMode.POMODORO);
+                togglePomodoro();  // Start the work timer automatically if auto-start is enabled
             }
         }
     }
@@ -2163,7 +2162,9 @@ public class TaskFrame extends JFrame {
         titleLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         titleLabel.setForeground(Color.WHITE);
 
-        SpinnerModel model = new SpinnerNumberModel(defaultValue / 60, 1, 60, 1);
+        // Ensure defaultValue is within valid range (1-60 minutes)
+        int initialValue = Math.min(Math.max(defaultValue, 1), 60);
+        SpinnerModel model = new SpinnerNumberModel(initialValue, 1, 60, 1);
         JSpinner spinner = new JSpinner(model);
         spinner.setPreferredSize(new Dimension(60, 30));
         JComponent editor = spinner.getEditor();
