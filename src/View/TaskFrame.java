@@ -655,7 +655,8 @@ public class TaskFrame extends JFrame {
 
         // Add settings button
         JButton settingsButton = createSettingsButton();
-
+        settingsButton.setText("⚙"); // S'assure que l'icône est bien la roue dentée
+        settingsButton.setFont(new Font("Segoe UI", Font.BOLD, 22)); // Plus visible
         modePanel.add(Box.createHorizontalStrut(10));
         modePanel.add(settingsButton);
 
@@ -774,36 +775,56 @@ public class TaskFrame extends JFrame {
     }
 
     private JButton createSettingsButton() {
-        JButton settingsButton = new JButton("⚙");
-        settingsButton.setFont(new Font("Segoe UI", Font.BOLD, 20));  // Increased font size for better visibility
-        settingsButton.setForeground(Color.WHITE);
+        JButton settingsButton = new JButton();
         settingsButton.setBorderPainted(false);
         settingsButton.setContentAreaFilled(false);
         settingsButton.setOpaque(false);
         settingsButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         settingsButton.setBorder(BorderFactory.createEmptyBorder(8, 16, 8, 16));
-        
+        settingsButton.setIcon(createGearIcon(22, 22, Color.WHITE));
         // Create settings popup
         JPopupMenu settingsPopup = createSettingsPopup();
-        
         settingsButton.addActionListener(e -> {
             settingsPopup.show(settingsButton, 
                              settingsButton.getWidth() - settingsPopup.getPreferredSize().width, 
                              settingsButton.getHeight());
         });
-        
-        settingsButton.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                settingsButton.setForeground(new Color(255, 255, 255, 200));
-            }
-            @Override
-            public void mouseExited(MouseEvent e) {
-                settingsButton.setForeground(Color.WHITE);
-            }
-        });
-
         return settingsButton;
+    }
+
+    // Ajoute une méthode utilitaire pour dessiner une roue dentée
+    private Icon createGearIcon(int w, int h, Color color) {
+        return new Icon() {
+            @Override
+            public void paintIcon(Component c, Graphics g, int x, int y) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(color);
+                int cx = x + w / 2;
+                int cy = y + h / 2;
+                int r1 = Math.min(w, h) / 2 - 2;
+                int r2 = r1 - 4;
+                // Draw gear teeth
+                for (int i = 0; i < 8; i++) {
+                    double angle = i * Math.PI / 4;
+                    int tx1 = (int) (cx + r2 * Math.cos(angle));
+                    int ty1 = (int) (cy + r2 * Math.sin(angle));
+                    int tx2 = (int) (cx + r1 * Math.cos(angle));
+                    int ty2 = (int) (cy + r1 * Math.sin(angle));
+                    g2.setStroke(new BasicStroke(3));
+                    g2.drawLine(tx1, ty1, tx2, ty2);
+                }
+                // Draw gear body
+                g2.setStroke(new BasicStroke(2));
+                g2.drawOval(cx - r2, cy - r2, 2 * r2, 2 * r2);
+                g2.fillOval(cx - 3, cy - 3, 6, 6);
+                g2.dispose();
+            }
+            @Override
+            public int getIconWidth() { return w; }
+            @Override
+            public int getIconHeight() { return h; }
+        };
     }
 
     private JButton createModeButton(String text, PomodoroMode mode) {

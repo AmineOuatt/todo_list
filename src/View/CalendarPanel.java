@@ -71,14 +71,14 @@ public class CalendarPanel extends JPanel {
         JPanel monthNavPanel = new JPanel(new BorderLayout());
         monthNavPanel.setBackground(BACKGROUND_COLOR);
         
-        JButton prevButton = new JButton("◀");
+        JButton prevButton = new JButton("⟨ préc");
         prevButton.setFocusPainted(false);
         prevButton.setBorderPainted(false);
         prevButton.setContentAreaFilled(false);
         prevButton.setFont(new Font("Segoe UI", Font.BOLD, 14));
         prevButton.setForeground(PRIMARY_COLOR);
         
-        JButton nextButton = new JButton("▶");
+        JButton nextButton = new JButton("suiv ⟩");
         nextButton.setFocusPainted(false);
         nextButton.setBorderPainted(false);
         nextButton.setContentAreaFilled(false);
