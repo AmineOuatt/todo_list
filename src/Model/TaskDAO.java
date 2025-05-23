@@ -481,20 +481,41 @@ public class TaskDAO {
         return success;
     }
 
-    // Delete task
-    public static boolean deleteTask(int taskId) {
-        // Query to delete a task by its ID
-        String query = "DELETE FROM Tasks WHERE task_id = ?";
-
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(query)) {
-            stmt.setInt(1, taskId);
-
-            return stmt.executeUpdate() > 0;
-        } catch (SQLException e) {
-            System.out.println("Error deleting task: " + e.getMessage());
-        }
-        return false;
+    // Delete task    
+    public static boolean deleteTask(int taskId) {        
+        try (Connection conn = DatabaseConnection.getConnection()) {            
+            // Utilisez une transaction pour garantir que tout est supprimé correctement            
+            conn.setAutoCommit(false);                        
+            
+            try {                
+                // Supprimer d'abord tous les commentaires liés à cette tâche                
+                try (PreparedStatement deleteComments = conn.prepareStatement("DELETE FROM task_comments WHERE task_id = ?")) {                    
+                    deleteComments.setInt(1, taskId);                    
+                    deleteComments.executeUpdate();                
+                }                                
+                
+                // Puis supprimer la tâche elle-même                
+                try (PreparedStatement deleteTask = conn.prepareStatement("DELETE FROM Tasks WHERE task_id = ?")) {                    
+                    deleteTask.setInt(1, taskId);                    
+                    int result = deleteTask.executeUpdate();                                        
+                    
+                    // Valider la transaction seulement si la suppression a réussi                    
+                    conn.commit();                    
+                    return result > 0;                
+                }                            
+            } catch (SQLException e) {                
+                // En cas d'erreur, annuler toutes les modifications                
+                conn.rollback();                
+                System.out.println("Error deleting task: " + e.getMessage());                
+                return false;            
+            } finally {                
+                // Rétablir le mode auto-commit                
+                conn.setAutoCommit(true);            
+            }        
+        } catch (SQLException e) {            
+            System.out.println("Error connecting to database: " + e.getMessage());            
+            return false;        
+        }    
     }
 
     // Update task status

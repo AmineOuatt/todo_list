@@ -1,6 +1,8 @@
 package View;
 
+import Model.DatabaseConnection;
 import javax.swing.SwingUtilities;
+import java.io.File;
 
 /**
  * Main entry point for the Task Management Application.
@@ -14,6 +16,9 @@ public class Main {
      * @param args Command line arguments (not used)
      */
     public static void main(String[] args) {
+        // Initialiser la base de données et les tables si nécessaire
+        initializeDatabase();
+        
         SwingUtilities.invokeLater(() -> {
             try {
                 // Create a listener that opens the login view when a user is selected
@@ -27,6 +32,27 @@ public class Main {
                 e.printStackTrace();
             }
         });
+    }
+    
+    /**
+     * Initialise la base de données et les tables nécessaires
+     */
+    private static void initializeDatabase() {
+        try {
+            // Vérifier si le répertoire de la base de données existe
+            File dbFile = new File("db");
+            if (!dbFile.exists()) {
+                dbFile.mkdir();
+            }
+            
+            // Tester la connexion à la base de données
+            DatabaseConnection.getConnection();
+            
+            System.out.println("Initialisation de la base de données réussie.");
+        } catch (Exception e) {
+            System.err.println("Erreur lors de l'initialisation de la base de données: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 }
 
