@@ -2486,7 +2486,15 @@ public class TaskFrame extends JFrame {
         refreshButton.setBorderPainted(false);
         refreshButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         refreshButton.addActionListener(e -> {
-            loadTasks();
+            // Trouver et vider le champ de recherche
+            JTextField searchField = findSearchField();
+            if (searchField != null) {
+                searchField.setText("");  // Ceci déclenchera un événement removeUpdate qui appellera filterTasks
+            } else {
+                // Si on ne trouve pas le champ de recherche, charger directement les tâches
+                loadTasks();
+                taskList.setModel(taskListModel);
+            }
             JOptionPane.showMessageDialog(this, "Tasks refreshed!", "Refresh", JOptionPane.INFORMATION_MESSAGE);
         });
         
@@ -2589,6 +2597,7 @@ public class TaskFrame extends JFrame {
     private void filterTasks(String searchText) {
         if (searchText.isEmpty()) {
             loadTasks(); // Reload all tasks
+            taskList.setModel(taskListModel); // S'assurer que le modèle de la liste est réinitialisé
             return;
         }
         
@@ -2808,7 +2817,15 @@ public class TaskFrame extends JFrame {
         
         // Additional logic for specific panels
         if (name.equals("TASKS")) {
-            loadTasks();
+            // Rechercher le champ de recherche et le vider
+            JTextField searchField = findSearchField();
+            if (searchField != null) {
+                searchField.setText("");  // Ceci déclenchera un événement removeUpdate qui appellera filterTasks
+            } else {
+                // Si on ne trouve pas le champ de recherche, charger directement les tâches
+                loadTasks();
+                taskList.setModel(taskListModel);
+            }
             showTaskListView();
         } else if (name.equals("POMODORO")) {
             // Nothing additional needed for Pomodoro view
@@ -2986,7 +3003,20 @@ public class TaskFrame extends JFrame {
             
             // Then delete the task
             if (TaskController.deleteTask(selectedTask.getTaskId())) {
-                loadTasks();
+                // Rechercher le texte dans le champ de recherche
+                JTextField searchField = findSearchField();
+                String searchText = searchField != null ? searchField.getText() : "";
+                
+                // Si le champ de recherche est vide, recharger toutes les tâches
+                if (searchText.isEmpty()) {
+                    loadTasks();
+                    taskList.setModel(taskListModel);
+                } else {
+                    // Si une recherche est en cours, recharger puis filtrer
+                    loadTasks();
+                    filterTasks(searchText);
+                }
+                
                 clearFields();
                 updateDashboard();
                 showTaskListView();
@@ -3241,12 +3271,12 @@ public class TaskFrame extends JFrame {
             public void insertUpdate(DocumentEvent e) {
                 filterNotes(searchField.getText());
             }
-
+            
             @Override
             public void removeUpdate(DocumentEvent e) {
                 filterNotes(searchField.getText());
             }
-
+            
             @Override
             public void changedUpdate(DocumentEvent e) {
                 filterNotes(searchField.getText());
@@ -3256,7 +3286,7 @@ public class TaskFrame extends JFrame {
         searchPanel.add(searchField, BorderLayout.CENTER);
         headerPanel.add(searchPanel, BorderLayout.CENTER);
         
-        // Filter options
+        // Filter panel with smaller control like in notes (now below the search)
         JPanel filterPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
         filterPanel.setBackground(SIDEBAR_COLOR);
         
@@ -4298,6 +4328,35 @@ public class TaskFrame extends JFrame {
                 return 24;
             }
         };
+    }
+
+    /**
+     * Helper method to find the search field in the panel
+     */
+    private JTextField findSearchField() {
+        // Recherche à travers les composants pour trouver le champ de recherche
+        for (Component component : mainContentPanel.getComponents()) {
+            if (component instanceof JPanel) {
+                JPanel panel = (JPanel) component;
+                for (Component c : panel.getComponents()) {
+                    if (c instanceof JPanel) {
+                        JPanel subPanel = (JPanel) c;
+                        for (Component c2 : subPanel.getComponents()) {
+                            if (c2 instanceof JTextField) {
+                                // Vérifier si c'est le champ de recherche par sa position ou ses propriétés
+                                JTextField field = (JTextField) c2;
+                                // Check if this is likely a search field by checking for placeholder text
+                                if ("Search tasks...".equals(field.getClientProperty("JTextField.placeholderText"))
+                                    || "Search notes...".equals(field.getClientProperty("JTextField.placeholderText"))) {
+                                    return field;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return null;
     }
 }
         
