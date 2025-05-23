@@ -26,6 +26,7 @@ import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.awt.Rectangle;
 
 import javax.swing.BorderFactory;
 import javax.swing.Box;
@@ -411,13 +412,32 @@ public class TaskFrame extends JFrame {
             }
         });
         
-        // Add mouse listener for double-click to toggle completion status
+        // Empêcher la sélection lorsqu'on clique dans le vide
         taskList.addMouseListener(new MouseAdapter() {
             @Override
+            public void mousePressed(MouseEvent e) {
+                int index = taskList.locationToIndex(e.getPoint());
+                if (index == -1) {
+                    // Clic dans le vide, annuler l'événement
+                    e.consume();
+                    taskList.clearSelection();
+                } else {
+                    // Vérifier si le clic est vraiment sur un élément ou dans l'espace vide en dessous du dernier élément
+                    Rectangle cellBounds = taskList.getCellBounds(index, index);
+                    if (!cellBounds.contains(e.getPoint())) {
+                        e.consume();
+                        taskList.clearSelection();
+                    }
+                }
+            }
+            
+            @Override
             public void mouseClicked(MouseEvent e) {
-                if (e.getClickCount() == 2) {
-                    int index = taskList.locationToIndex(e.getPoint());
-                    if (index >= 0) {
+                // Vérifier si le clic est sur un élément valide
+                int index = taskList.locationToIndex(e.getPoint());
+                if (index >= 0) {
+                    Rectangle cellBounds = taskList.getCellBounds(index, index);
+                    if (cellBounds.contains(e.getPoint()) && e.getClickCount() == 2) {
                         Task task = taskListModel.getElementAt(index);
                         // Toggle between Completed and Pending
                         String newStatus = "Completed".equals(task.getStatus()) ? "Pending" : "Completed";
