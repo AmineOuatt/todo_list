@@ -2576,6 +2576,7 @@ public class TaskFrame extends JFrame {
         filterLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         filterPanel.add(filterLabel);
         
+        // Category filter
         JComboBox<Category> filterComboBox = new JComboBox<>();
         filterComboBox.addItem(new Category(0, "All Tasks"));
         
@@ -2587,16 +2588,34 @@ public class TaskFrame extends JFrame {
         
         filterComboBox.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         filterComboBox.setPreferredSize(new Dimension(120, 25));
+        
+        // Ajouter le filtre de priorité
+        JLabel priorityFilterLabel = new JLabel("Priority:");
+        priorityFilterLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        
+        JComboBox<String> priorityFilterComboBox = new JComboBox<>();
+        priorityFilterComboBox.addItem("All Priorities");
+        priorityFilterComboBox.addItem("URGENT");
+        priorityFilterComboBox.addItem("HIGH");
+        priorityFilterComboBox.addItem("NORMAL");
+        priorityFilterComboBox.addItem("LOW");
+        
+        priorityFilterComboBox.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        priorityFilterComboBox.setPreferredSize(new Dimension(120, 25));
+        
+        // Combine les deux filtres
         filterComboBox.addActionListener(e -> {
-            Category selectedCategory = (Category) filterComboBox.getSelectedItem();
-            if (selectedCategory.getId() == 0) {
-                loadTasks(); // Load all tasks
-            } else {
-                loadTasksByCategory(selectedCategory.getId()); // Load tasks by category
-            }
+            applyFilters(filterComboBox, priorityFilterComboBox);
+        });
+        
+        priorityFilterComboBox.addActionListener(e -> {
+            applyFilters(filterComboBox, priorityFilterComboBox);
         });
         
         filterPanel.add(filterComboBox);
+        filterPanel.add(Box.createHorizontalStrut(10));
+        filterPanel.add(priorityFilterLabel);
+        filterPanel.add(priorityFilterComboBox);
         headerPanel.add(filterPanel, BorderLayout.SOUTH);
         
         // Task list with custom renderer
@@ -4377,6 +4396,132 @@ public class TaskFrame extends JFrame {
             }
         }
         return null;
+    }
+
+    /**
+     * Méthode qui applique les filtres combinés de catégorie et priorité
+     */
+    private void applyFilters(JComboBox<Category> categoryCombo, JComboBox<String> priorityCombo) {
+        Category selectedCategory = (Category) categoryCombo.getSelectedItem();
+        String selectedPriority = (String) priorityCombo.getSelectedItem();
+        
+        // Aucun filtre sélectionné - afficher toutes les tâches
+        if ((selectedCategory.getId() == 0) && "All Priorities".equals(selectedPriority)) {
+            loadTasks();
+        }
+        // Filtre par catégorie uniquement
+        else if (selectedCategory.getId() != 0 && "All Priorities".equals(selectedPriority)) {
+            loadTasksByCategory(selectedCategory.getId());
+        }
+        // Filtre par priorité uniquement
+        else if (selectedCategory.getId() == 0 && !"All Priorities".equals(selectedPriority)) {
+            loadTasksByPriority(selectedPriority);
+        }
+        // Filtre combiné catégorie + priorité
+        else {
+            loadTasksByCategoryAndPriority(selectedCategory.getId(), selectedPriority);
+        }
+    }
+
+    /**
+     * Loads tasks filtered by priority
+     * @param priority The priority to filter by
+     */
+    private void loadTasksByPriority(String priority) {
+        taskListModel.clear();
+        
+        try {
+            // Get all tasks for the user
+            List<Task> allTasks = TaskController.getTasks(userId);
+            
+            // Filter tasks by priority
+            List<Task> filteredTasks = allTasks.stream()
+                .filter(task -> priority.equals(task.getPriority()))
+                .collect(java.util.stream.Collectors.toList());
+            
+            // Sort tasks (same sorting logic as in loadTasks)
+            Collections.sort(filteredTasks, (t1, t2) -> {
+                // First compare status (Pending and In Progress before Completed)
+                boolean t1Completed = "Completed".equalsIgnoreCase(t1.getStatus());
+                boolean t2Completed = "Completed".equalsIgnoreCase(t2.getStatus());
+                
+                if (t1Completed && !t2Completed) return 1;
+                if (!t1Completed && t2Completed) return -1;
+                
+                // Then compare priorities
+                String p1 = t1.getPriority() != null ? t1.getPriority() : "NORMAL";
+                String p2 = t2.getPriority() != null ? t2.getPriority() : "NORMAL";
+                
+                // Priority order: URGENT > HIGH > NORMAL > LOW
+                int p1Value = getPriorityValue(p1);
+                int p2Value = getPriorityValue(p2);
+                
+                return Integer.compare(p1Value, p2Value);
+            });
+            
+            // Add each task to the list model
+            for (Task task : filteredTasks) {
+                taskListModel.addElement(task);
+            }
+            
+            // Refresh the dashboard if needed
+            if (dashboardPanel != null) {
+                updateDashboard();
+            }
+        } catch (Exception e) {
+            System.out.println("Error loading tasks by priority: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Loads tasks filtered by both category and priority
+     * @param categoryId The ID of the category to filter by
+     * @param priority The priority to filter by
+     */
+    private void loadTasksByCategoryAndPriority(int categoryId, String priority) {
+        taskListModel.clear();
+        
+        try {
+            // Get tasks filtered by category
+            List<Task> tasksInCategory = TaskController.getTasksByCategory(userId, categoryId);
+            
+            // Further filter by priority
+            List<Task> filteredTasks = tasksInCategory.stream()
+                .filter(task -> priority.equals(task.getPriority()))
+                .collect(java.util.stream.Collectors.toList());
+            
+            // Sort tasks (same sorting logic as in loadTasks)
+            Collections.sort(filteredTasks, (t1, t2) -> {
+                // First compare status (Pending and In Progress before Completed)
+                boolean t1Completed = "Completed".equalsIgnoreCase(t1.getStatus());
+                boolean t2Completed = "Completed".equalsIgnoreCase(t2.getStatus());
+                
+                if (t1Completed && !t2Completed) return 1;
+                if (!t1Completed && t2Completed) return -1;
+                
+                // Then compare priorities
+                String p1 = t1.getPriority() != null ? t1.getPriority() : "NORMAL";
+                String p2 = t2.getPriority() != null ? t2.getPriority() : "NORMAL";
+                
+                // Priority order: URGENT > HIGH > NORMAL > LOW
+                int p1Value = getPriorityValue(p1);
+                int p2Value = getPriorityValue(p2);
+                
+                return Integer.compare(p1Value, p2Value);
+            });
+            
+            // Add each task to the list model
+            for (Task task : filteredTasks) {
+                taskListModel.addElement(task);
+            }
+            
+            // Refresh the dashboard if needed
+            if (dashboardPanel != null) {
+                updateDashboard();
+            }
+        } catch (Exception e) {
+            System.out.println("Error loading tasks by category and priority: " + e.getMessage());
+        }
     }
 }
         
