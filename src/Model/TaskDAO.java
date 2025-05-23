@@ -873,4 +873,35 @@ public class TaskDAO {
         
         return occurrenceTask;
     }
+
+    /**
+     * Check if a task is shared with a specific user
+     * @param taskId The ID of the task to check
+     * @param userId The ID of the user to check
+     * @return true if the task is shared with the user, false otherwise
+     */
+    public static boolean isTaskSharedWithUser(int taskId, int userId) {
+        // Get the task owner
+        Task task = getTaskById(taskId);
+        if (task == null) return false;
+        
+        // Check if the user is a collaborator of the task owner
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(
+                     "SELECT * FROM user_collaborations WHERE (user_id = ? AND collaborator_id = ?) OR (user_id = ? AND collaborator_id = ?)")) {
+            
+            stmt.setInt(1, task.getUserId());
+            stmt.setInt(2, userId);
+            stmt.setInt(3, userId);
+            stmt.setInt(4, task.getUserId());
+            
+            try (ResultSet rs = stmt.executeQuery()) {
+                return rs.next(); // If there's a record, they are collaborators
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        
+        return false;
+    }
 }

@@ -23,6 +23,16 @@ public class TaskController {
     public static List<Task> getTasks(int userId) {
         return TaskDAO.getTasksByUserId(userId);
     }
+    
+    /**
+     * Alias method for CollaborationView
+     * Get all tasks for a user
+     * @param userId The ID of the user
+     * @return List of tasks for the user
+     */
+    public static List<Task> getTasksByUser(int userId) {
+        return getTasks(userId);
+    }
 
     /**
      * Get all tasks for a user including generated occurrences of recurring tasks
@@ -213,7 +223,7 @@ public class TaskController {
         }
         return TaskDAO.insertTask(task);
     }
-    
+
     // Create a new recurring task (without category) with priority
     public static boolean createTask(int userId, String title, String description, String status, Date dueDate,
                                     boolean isRecurring, String recurrenceType, int recurrenceInterval, Date recurrenceEndDate, 
@@ -610,6 +620,24 @@ public class TaskController {
             .filter(task -> task.getParentTaskId() != null && 
                    task.getParentTaskId() == parentTaskId)
             .collect(Collectors.toList());
+    }
+    
+    /**
+     * Check if a task is shared with a specific user
+     * @param taskId The ID of the task to check
+     * @param userId The ID of the user to check
+     * @return true if the task is shared with the user, false otherwise
+     */
+    public static boolean isTaskSharedWithUser(int taskId, int userId) {
+        // Get the task
+        Task task = TaskDAO.getTaskById(taskId);
+        if (task == null) return false;
+        
+        // Check if the task belongs to the user directly
+        if (task.getUserId() == userId) return true;
+        
+        // Otherwise, check if the task is shared via collaboration
+        return TaskDAO.isTaskSharedWithUser(taskId, userId);
     }
     
     /**

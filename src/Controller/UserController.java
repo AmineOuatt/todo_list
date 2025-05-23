@@ -23,6 +23,15 @@ public class UserController {
         return UserDAO.getAllUsers();
     }
 
+    /**
+     * Get a user by ID
+     * @param userId The ID of the user to retrieve
+     * @return The user with the specified ID, or null if not found
+     */
+    public static User getUserById(int userId) {
+        return UserDAO.getUserById(userId);
+    }
+
     public static boolean authenticateUser(String username, String password) {
         User user = UserDAO.getUserByUsername(username);
         if (user != null && UserDAO.authenticateUser(username, password)) {
@@ -57,5 +66,25 @@ public class UserController {
 
     public static boolean isLoggedIn() {
         return currentUser != null;
+    }
+
+    public static boolean addCollaboration(int userId, int collaboratorId) {
+        return UserDAO.addCollaboration(userId, collaboratorId);
+    }
+
+    public static boolean removeCollaboration(int userId, int collaboratorId) {
+        return UserDAO.removeCollaboration(userId, collaboratorId);
+    }
+
+    public static List<User> getCollaborators(int userId) {
+        return UserDAO.getCollaborators(userId);
+    }
+
+    public static boolean isCollaborator(int userId, int collaboratorId) {
+        return UserDAO.isCollaborator(userId, collaboratorId);
+    }
+
+    public static List<User> searchUsersByUsername(String searchTerm) {
+        return UserDAO.searchUsersByUsername(searchTerm);
     }
 }

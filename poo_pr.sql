@@ -178,6 +178,18 @@ INSERT INTO `users` (`user_id`, `username`, `password_hash`, `created_at`) VALUE
 
 -- --------------------------------------------------------
 
+--
+-- Table structure for table `user_collaborations`
+--
+
+CREATE TABLE `user_collaborations` (
+  `collaboration_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `collaborator_id` int(11) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
 
 --
 -- Indexes for dumped tables
@@ -237,6 +249,15 @@ ALTER TABLE `users`
   ADD UNIQUE KEY `username` (`username`);
 
 --
+-- Indexes for table `user_collaborations`
+--
+ALTER TABLE `user_collaborations`
+  ADD PRIMARY KEY (`collaboration_id`),
+  ADD UNIQUE KEY `unique_collaboration` (`user_id`, `collaborator_id`),
+  ADD KEY `idx_user_id` (`user_id`),
+  ADD KEY `idx_collaborator_id` (`collaborator_id`);
+
+--
 -- AUTO_INCREMENT for dumped tables
 --
 
@@ -283,6 +304,12 @@ ALTER TABLE `users`
   MODIFY `user_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
+-- AUTO_INCREMENT for table `user_collaborations`
+--
+ALTER TABLE `user_collaborations`
+  MODIFY `collaboration_id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
 -- Constraints for dumped tables
 --
 
@@ -314,6 +341,13 @@ ALTER TABLE `tasks`
   ADD CONSTRAINT `fk_recurring_pattern` FOREIGN KEY (`recurring_pattern_id`) REFERENCES `recurring_patterns` (`pattern_id`) ON DELETE SET NULL,
   ADD CONSTRAINT `fk_task_category` FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`) ON DELETE SET NULL,
   ADD CONSTRAINT `tasks_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `user_collaborations`
+--
+ALTER TABLE `user_collaborations`
+  ADD CONSTRAINT `fk_user_id` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_collaborator_id` FOREIGN KEY (`collaborator_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

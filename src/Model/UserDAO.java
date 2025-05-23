@@ -144,4 +144,133 @@ public class UserDAO {
         }
         return null;
     }
+
+    // Méthode pour ajouter une collaboration
+    public static boolean addCollaboration(int userId, int collaboratorId) {
+        if (userId == collaboratorId) {
+            return false; // On ne peut pas collaborer avec soi-même
+        }
+        
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(
+                     "INSERT INTO user_collaborations (user_id, collaborator_id) VALUES (?, ?)")) {
+            
+            stmt.setInt(1, userId);
+            stmt.setInt(2, collaboratorId);
+            return stmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.out.println("Error adding collaboration: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return false;
+    }
+    
+    // Méthode pour supprimer une collaboration
+    public static boolean removeCollaboration(int userId, int collaboratorId) {
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(
+                     "DELETE FROM user_collaborations WHERE user_id = ? AND collaborator_id = ?")) {
+            
+            stmt.setInt(1, userId);
+            stmt.setInt(2, collaboratorId);
+            return stmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.out.println("Error removing collaboration: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return false;
+    }
+    
+    // Méthode pour récupérer les collaborateurs d'un utilisateur
+    public static List<User> getCollaborators(int userId) {
+        List<User> collaborators = new ArrayList<>();
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(
+                     "SELECT u.user_id, u.username FROM users u " +
+                     "JOIN user_collaborations uc ON u.user_id = uc.collaborator_id " +
+                     "WHERE uc.user_id = ?")) {
+            
+            stmt.setInt(1, userId);
+            ResultSet rs = stmt.executeQuery();
+            
+            while (rs.next()) {
+                collaborators.add(new User(
+                        rs.getInt("user_id"),
+                        rs.getString("username")
+                ));
+            }
+        } catch (SQLException e) {
+            System.out.println("Error fetching collaborators: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return collaborators;
+    }
+    
+    // Méthode pour vérifier si une collaboration existe déjà
+    public static boolean isCollaborator(int userId, int collaboratorId) {
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(
+                     "SELECT COUNT(*) FROM user_collaborations WHERE user_id = ? AND collaborator_id = ?")) {
+            
+            stmt.setInt(1, userId);
+            stmt.setInt(2, collaboratorId);
+            ResultSet rs = stmt.executeQuery();
+            
+            if (rs.next()) {
+                return rs.getInt(1) > 0;
+            }
+        } catch (SQLException e) {
+            System.out.println("Error checking collaboration: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return false;
+    }
+    
+    // Méthode pour rechercher des utilisateurs par nom d'utilisateur (pour la recherche de collaborateurs)
+    public static List<User> searchUsersByUsername(String searchTerm) {
+        List<User> users = new ArrayList<>();
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(
+                     "SELECT user_id, username FROM users WHERE username LIKE ? LIMIT 20")) {
+            
+            stmt.setString(1, "%" + searchTerm + "%");
+            ResultSet rs = stmt.executeQuery();
+            
+            while (rs.next()) {
+                users.add(new User(
+                        rs.getInt("user_id"),
+                        rs.getString("username")
+                ));
+            }
+        } catch (SQLException e) {
+            System.out.println("Error searching users: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return users;
+    }
+
+    /**
+     * Get a user by ID
+     * @param userId The ID of the user to retrieve
+     * @return The user with the specified ID, or null if not found
+     */
+    public static User getUserById(int userId) {
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(
+                     "SELECT * FROM Users WHERE user_id = ?")) {
+            stmt.setInt(1, userId);
+            
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return new User(
+                        rs.getInt("user_id"),
+                        rs.getString("username")
+                    );
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
 }

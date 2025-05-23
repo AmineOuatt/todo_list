@@ -371,6 +371,9 @@ public class TaskFrame extends JFrame {
     private JSpinner dayOfMonthSpinner;
     private JComboBox<String> monthOfYearComboBox;
 
+    private JPanel collaborationsPanel;
+    private JButton collaborationsButton;
+
     public TaskFrame(int userId) {
         this.userId = userId;
         
@@ -464,6 +467,7 @@ public class TaskFrame extends JFrame {
         sidebarPanel.setButtonIcon("DASHBOARD", createDashboardIcon());
         sidebarPanel.setButtonIcon("CALENDAR", createCalendarIcon());
         sidebarPanel.setButtonIcon("NOTES", createNoteIcon());
+        sidebarPanel.setButtonIcon("COLLABORATIONS", createCollaborationIcon());
         sidebarPanel.setButtonIcon("LOGOUT", createLogoutIcon());
         
         // Store references for later use
@@ -523,6 +527,11 @@ public class TaskFrame extends JFrame {
         mainContentPanel.add(dashboardPanel, "DASHBOARD");
         mainContentPanel.add(calendarPanel, "CALENDAR");
         mainContentPanel.add(notesPanel, "NOTES");
+        
+        // Create and add collaborations panel
+        collaborationsPanel = new JPanel(new BorderLayout());
+        collaborationsPanel.setBackground(BACKGROUND_COLOR);
+        mainContentPanel.add(collaborationsPanel, "COLLABORATIONS");
         
         // Add main content panel to frame
         add(mainContentPanel, BorderLayout.CENTER);
@@ -2787,33 +2796,35 @@ public class TaskFrame extends JFrame {
      * Switches the main panel to show the requested view
      */
     public void showPanel(String name) {
+        // Vérifier que sidebarPanel est initialisé
+        if (sidebarPanel != null) {
+            // Change the selected button in the sidebar
+            sidebarPanel.updateSelectedButton(name);
+        }
+        
+        // Utiliser mainContentPanel au lieu de sidebarContent pour changer la vue
         CardLayout cl = (CardLayout) mainContentPanel.getLayout();
         cl.show(mainContentPanel, name);
         
-        // Update button states
-        switch (name) {
-            case "TASKS":
-                sidebarPanel.updateSelectedButton("TASKS");
-                // Show the task list view by default
-                showTaskListView();
-                break;
-            case "POMODORO":
-                sidebarPanel.updateSelectedButton("POMODORO");
-                break;
-            case "DASHBOARD":
-                sidebarPanel.updateSelectedButton("DASHBOARD");
-                updateDashboard(); // Refresh dashboard data
-                break;
-            case "CALENDAR":
-                sidebarPanel.updateSelectedButton("CALENDAR");
-                // Update calendar data using the CalendarPanel's method
-                ((CalendarPanel) calendarPanel).updateCalendar();
-                break;
-            case "NOTES":
-                sidebarPanel.updateSelectedButton("NOTES");
-                // Show the notes list view by default
-                showNotesListView();
-                break;
+        // Additional logic for specific panels
+        if (name.equals("TASKS")) {
+            loadTasks();
+            showTaskListView();
+        } else if (name.equals("POMODORO")) {
+            // Nothing additional needed for Pomodoro view
+        } else if (name.equals("DASHBOARD")) {
+            updateDashboard();
+        } else if (name.equals("NOTES")) {
+            loadNotes();
+            showNotesListView();
+        } else if (name.equals("COLLABORATIONS")) {
+            // Vérifier que collaborationsPanel est initialisé
+            if (collaborationsPanel != null) {
+                collaborationsPanel.removeAll();
+                collaborationsPanel.add(new CollaborationView(userId));
+                collaborationsPanel.revalidate();
+                collaborationsPanel.repaint();
+            }
         }
     }
 
@@ -4243,6 +4254,50 @@ public class TaskFrame extends JFrame {
         recurrencePanel.setVisible(isRecurringCheckBox.isSelected());
         revalidate();
         repaint();
+    }
+
+    // Nouvel icône pour les collaborations
+    private Icon createCollaborationIcon() {
+        return new Icon() {
+            @Override
+            public void paintIcon(Component c, Graphics g, int x, int y) {
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                
+                // Couleur de l'icône
+                Color iconColor = c.getForeground();
+                g2d.setColor(iconColor);
+                g2d.setStroke(new BasicStroke(2));
+                
+                // Dessiner deux silhouettes de personnes côte à côte
+                // Premier personnage
+                g2d.fillOval(x + 5, y + 2, 10, 10); // Tête
+                g2d.drawLine(x + 10, y + 12, x + 10, y + 20); // Corps
+                g2d.drawLine(x + 10, y + 15, x + 5, y + 18); // Bras gauche
+                g2d.drawLine(x + 10, y + 15, x + 15, y + 18); // Bras droit
+                
+                // Deuxième personnage
+                g2d.fillOval(x + 18, y + 2, 10, 10); // Tête
+                g2d.drawLine(x + 23, y + 12, x + 23, y + 20); // Corps
+                g2d.drawLine(x + 23, y + 15, x + 18, y + 18); // Bras gauche
+                g2d.drawLine(x + 23, y + 15, x + 28, y + 18); // Bras droit
+                
+                // Ligne de connexion entre les deux personnages
+                g2d.drawLine(x + 13, y + 16, x + 20, y + 16);
+                
+                g2d.dispose();
+            }
+
+            @Override
+            public int getIconWidth() {
+                return 32;
+            }
+
+            @Override
+            public int getIconHeight() {
+                return 24;
+            }
+        };
     }
 }
         
