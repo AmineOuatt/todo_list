@@ -8,6 +8,7 @@ import java.awt.FlowLayout;
 import java.awt.Font;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -22,8 +23,6 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextField;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
-import javax.swing.event.DocumentEvent;
-import javax.swing.event.DocumentListener;
 
 import Controller.UserController;
 import Model.CollaborationRequest;
@@ -68,47 +67,53 @@ public class RequestsView extends JPanel {
     }
     
     private JPanel createHeaderPanel() {
-        JPanel panel = new JPanel(new BorderLayout(10, 0));
-        panel.setBackground(BACKGROUND_COLOR);
-        panel.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createMatteBorder(0, 0, 1, 0, BORDER_COLOR),
-            new EmptyBorder(0, 0, 15, 0)
-        ));
+        JPanel headerPanel = new JPanel(new BorderLayout());
+        headerPanel.setBackground(BACKGROUND_COLOR);
         
         // Title
         JLabel titleLabel = new JLabel("Pending Requests");
         titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 24));
         titleLabel.setForeground(TEXT_COLOR);
-        panel.add(titleLabel, BorderLayout.WEST);
+        headerPanel.add(titleLabel, BorderLayout.WEST);
         
-        // Search panel
-        JPanel searchPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        // Search and refresh panel
+        JPanel searchPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         searchPanel.setBackground(BACKGROUND_COLOR);
+        
+        // Refresh button
+        JButton refreshButton = new JButton("Refresh");
+        styleButton(refreshButton, true);
+        refreshButton.addActionListener(e -> loadRequests());
+        searchPanel.add(refreshButton);
         
         // Search field
         searchField = new JTextField(20);
+        searchField.setPreferredSize(new Dimension(200, 35));
         searchField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        searchField.putClientProperty("JTextField.placeholderText", "Search by user...");
-        searchField.getDocument().addDocumentListener(new DocumentListener() {
-            public void changedUpdate(DocumentEvent e) { filterRequests(); }
-            public void removeUpdate(DocumentEvent e) { filterRequests(); }
-            public void insertUpdate(DocumentEvent e) { filterRequests(); }
-        });
-        
-        searchPanel.add(new JLabel("Search:"));
+        searchField.setBorder(BorderFactory.createCompoundBorder(
+                new LineBorder(BORDER_COLOR),
+                new EmptyBorder(5, 10, 5, 10)));
         searchPanel.add(searchField);
         
-        panel.add(searchPanel, BorderLayout.EAST);
+        headerPanel.add(searchPanel, BorderLayout.EAST);
         
-        return panel;
+        return headerPanel;
     }
     
     private void loadRequests() {
         // Clear panels
         pendingRequestsPanel.removeAll();
         
-        // Load pending requests
-        allPendingRequests = UserController.getPendingRequests(currentUserId);
+        // Load both sent and received pending requests
+        List<CollaborationRequest> receivedRequests = UserController.getPendingRequests(currentUserId);
+        List<CollaborationRequest> sentRequests = UserController.getSentRequests(currentUserId).stream()
+            .filter(request -> request.getStatus().equals("pending"))
+            .collect(Collectors.toList());
+        
+        allPendingRequests = new ArrayList<>();
+        allPendingRequests.addAll(receivedRequests);
+        allPendingRequests.addAll(sentRequests);
+        
         filterRequests();
     }
     
@@ -156,11 +161,17 @@ public class RequestsView extends JPanel {
         nameLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
         nameLabel.setForeground(TEXT_COLOR);
         
+        JLabel typeLabel = new JLabel(request.getSenderId() == currentUserId ? "Sent to" : "Received from");
+        typeLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        typeLabel.setForeground(new Color(128, 128, 128));
+        
         JLabel dateLabel = new JLabel("Sent " + formatDate(request.getCreatedAt()));
         dateLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         dateLabel.setForeground(new Color(128, 128, 128));
         
         infoPanel.add(nameLabel);
+        infoPanel.add(Box.createVerticalStrut(5));
+        infoPanel.add(typeLabel);
         infoPanel.add(Box.createVerticalStrut(5));
         infoPanel.add(dateLabel);
         
@@ -168,16 +179,25 @@ public class RequestsView extends JPanel {
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 5, 0));
         buttonPanel.setBackground(CARD_COLOR);
         
-        JButton acceptButton = new JButton("Accept");
-        styleButton(acceptButton, true);
-        acceptButton.addActionListener(e -> respondToRequest(request, "accepted"));
-        
-        JButton declineButton = new JButton("Decline");
-        styleButton(declineButton, false);
-        declineButton.addActionListener(e -> respondToRequest(request, "declined"));
-        
-        buttonPanel.add(acceptButton);
-        buttonPanel.add(declineButton);
+        if (request.getSenderId() == currentUserId) {
+            // For sent requests, show cancel button
+            JButton cancelButton = new JButton("Cancel");
+            styleButton(cancelButton, false);
+            cancelButton.addActionListener(e -> respondToRequest(request, "declined"));
+            buttonPanel.add(cancelButton);
+        } else {
+            // For received requests, show accept and decline buttons
+            JButton acceptButton = new JButton("Accept");
+            styleButton(acceptButton, true);
+            acceptButton.addActionListener(e -> respondToRequest(request, "accepted"));
+            
+            JButton declineButton = new JButton("Decline");
+            styleButton(declineButton, false);
+            declineButton.addActionListener(e -> respondToRequest(request, "declined"));
+            
+            buttonPanel.add(acceptButton);
+            buttonPanel.add(declineButton);
+        }
         
         card.add(infoPanel, BorderLayout.CENTER);
         card.add(buttonPanel, BorderLayout.EAST);

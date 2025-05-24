@@ -3,6 +3,7 @@ package View;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
 import java.sql.Timestamp;
@@ -13,6 +14,7 @@ import java.util.stream.Collectors;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
+import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -20,8 +22,6 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextField;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
-import javax.swing.event.DocumentEvent;
-import javax.swing.event.DocumentListener;
 
 import Controller.UserController;
 import Model.CollaborationRequest;
@@ -68,57 +68,59 @@ public class RequestStatusView extends JPanel {
     }
     
     private JPanel createHeaderPanel() {
-        JPanel panel = new JPanel(new BorderLayout(10, 0));
-        panel.setBackground(BACKGROUND_COLOR);
-        panel.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createMatteBorder(0, 0, 1, 0, BORDER_COLOR),
-            new EmptyBorder(0, 0, 15, 0)
-        ));
+        JPanel headerPanel = new JPanel(new BorderLayout());
+        headerPanel.setBackground(BACKGROUND_COLOR);
         
-        // Title and count panel
-        JPanel titlePanel = new JPanel(new BorderLayout(10, 0));
-        titlePanel.setBackground(BACKGROUND_COLOR);
-        
+        // Title
         JLabel titleLabel = new JLabel("Request Status");
         titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 24));
         titleLabel.setForeground(TEXT_COLOR);
+        headerPanel.add(titleLabel, BorderLayout.WEST);
         
-        JLabel countLabel = new JLabel("0 requests");
-        countLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        countLabel.setForeground(new Color(128, 128, 128));
+        // Search, filter and refresh panel
+        JPanel controlPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        controlPanel.setBackground(BACKGROUND_COLOR);
         
-        titlePanel.add(titleLabel, BorderLayout.WEST);
-        titlePanel.add(countLabel, BorderLayout.EAST);
-        panel.add(titlePanel, BorderLayout.WEST);
+        // Refresh button
+        JButton refreshButton = new JButton("Refresh");
+        styleButton(refreshButton, true);
+        refreshButton.addActionListener(e -> loadRequests());
+        controlPanel.add(refreshButton);
         
-        // Search and filter panel
-        JPanel searchFilterPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
-        searchFilterPanel.setBackground(BACKGROUND_COLOR);
+        // Status filter
+        statusFilter = new JComboBox<>(new String[]{"All", "Accepted", "Declined"});
+        statusFilter.setPreferredSize(new Dimension(120, 35));
+        statusFilter.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        statusFilter.addActionListener(e -> filterRequests());
+        controlPanel.add(statusFilter);
         
         // Search field
         searchField = new JTextField(20);
+        searchField.setPreferredSize(new Dimension(200, 35));
         searchField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        searchField.putClientProperty("JTextField.placeholderText", "Search by user...");
-        searchField.getDocument().addDocumentListener(new DocumentListener() {
-            public void changedUpdate(DocumentEvent e) { filterRequests(); }
-            public void removeUpdate(DocumentEvent e) { filterRequests(); }
-            public void insertUpdate(DocumentEvent e) { filterRequests(); }
-        });
+        searchField.setBorder(BorderFactory.createCompoundBorder(
+                new LineBorder(BORDER_COLOR),
+                new EmptyBorder(5, 10, 5, 10)));
+        controlPanel.add(searchField);
         
-        // Status filter
-        String[] statuses = {"All Statuses", "Pending", "Accepted", "Declined"};
-        statusFilter = new JComboBox<>(statuses);
-        statusFilter.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        statusFilter.addActionListener(e -> filterRequests());
+        headerPanel.add(controlPanel, BorderLayout.EAST);
         
-        searchFilterPanel.add(new JLabel("Search:"));
-        searchFilterPanel.add(searchField);
-        searchFilterPanel.add(new JLabel("Status:"));
-        searchFilterPanel.add(statusFilter);
-        
-        panel.add(searchFilterPanel, BorderLayout.EAST);
-        
-        return panel;
+        return headerPanel;
+    }
+    
+    private void styleButton(JButton button, boolean isPrimary) {
+        button.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        if (isPrimary) {
+            button.setBackground(PRIMARY_COLOR);
+            button.setForeground(Color.WHITE);
+        } else {
+            button.setBackground(Color.WHITE);
+            button.setForeground(TEXT_COLOR);
+            button.setBorder(new LineBorder(BORDER_COLOR, 1));
+        }
+        button.setFocusPainted(false);
+        button.setPreferredSize(new Dimension(100, 35));
+        button.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
     }
     
     private void loadRequests() {
@@ -136,7 +138,7 @@ public class RequestStatusView extends JPanel {
         List<CollaborationRequest> filteredRequests = allRequests.stream()
             .filter(request -> {
                 boolean matchesSearch = request.getOtherUserName().toLowerCase().contains(searchText);
-                boolean matchesStatus = selectedStatus.equals("All Statuses") || 
+                boolean matchesStatus = selectedStatus.equals("All") || 
                                      request.getStatus().equalsIgnoreCase(selectedStatus);
                 return matchesSearch && matchesStatus;
             })

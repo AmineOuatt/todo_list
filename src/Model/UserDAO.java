@@ -167,13 +167,39 @@ public class UserDAO {
     
     // Méthode pour supprimer une collaboration
     public static boolean removeCollaboration(int userId, int collaboratorId) {
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(
-                     "DELETE FROM user_collaborations WHERE user_id = ? AND collaborator_id = ?")) {
-            
-            stmt.setInt(1, userId);
-            stmt.setInt(2, collaboratorId);
-            return stmt.executeUpdate() > 0;
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                // Delete the collaboration
+                try (PreparedStatement stmt = conn.prepareStatement(
+                        "DELETE FROM user_collaborations WHERE (user_id = ? AND collaborator_id = ?) OR (user_id = ? AND collaborator_id = ?)")) {
+                    stmt.setInt(1, userId);
+                    stmt.setInt(2, collaboratorId);
+                    stmt.setInt(3, collaboratorId);
+                    stmt.setInt(4, userId);
+                    stmt.executeUpdate();
+                }
+
+                // Update any existing collaboration requests to declined
+                try (PreparedStatement stmt = conn.prepareStatement(
+                        "UPDATE collaboration_requests SET status = 'declined' WHERE " +
+                        "((sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND receiver_id = ?)) " +
+                        "AND status = 'accepted'")) {
+                    stmt.setInt(1, userId);
+                    stmt.setInt(2, collaboratorId);
+                    stmt.setInt(3, collaboratorId);
+                    stmt.setInt(4, userId);
+                    stmt.executeUpdate();
+                }
+
+                conn.commit();
+                return true;
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
+            } finally {
+                conn.setAutoCommit(true);
+            }
         } catch (SQLException e) {
             System.out.println("Error removing collaboration: " + e.getMessage());
             e.printStackTrace();
