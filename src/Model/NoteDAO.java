@@ -13,9 +13,6 @@ public class NoteDAO {
     // Get all notes for a user
     public static List<Note> getNotesByUserId(int userId) {
         List<Note> notes = new ArrayList<>();
-        // Query to get all notes for a specific user, including their category information
-        // Joins the notes table with categories table to get category details
-        // Orders notes by creation date (newest first)
         String query = "SELECT n.*, c.id as category_id, c.name as category_name " +
                       "FROM notes n " +
                       "LEFT JOIN categories c ON n.category_id = c.id " +
@@ -56,9 +53,6 @@ public class NoteDAO {
     // Get notes by category for a user
     public static List<Note> getNotesByCategory(int userId, int categoryId) {
         List<Note> notes = new ArrayList<>();
-        // Query to get notes for a specific user and category
-        // Joins notes with categories table to get category details
-        // Filters by both user_id and category_id
         String query = "SELECT n.*, c.id as category_id, c.name as category_name " +
                       "FROM notes n " +
                       "LEFT JOIN categories c ON n.category_id = c.id " +
@@ -100,8 +94,6 @@ public class NoteDAO {
                       "FROM notes n " +
                       "LEFT JOIN categories c ON n.category_id = c.id " +
                       "WHERE n.note_id = ?";
-        // Query to get a specific note by its ID
-        // Joins with categories table to get category information
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(query)) {
@@ -137,8 +129,6 @@ public class NoteDAO {
     // Insert a new note
     public static boolean insertNote(Note note) {
         String query = "INSERT INTO notes (user_id, title, content, category_id) VALUES (?, ?, ?, ?)";
-        // Query to insert a new note
-        // Inserts user_id, title, content, and optional category_id
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(query, Statement.RETURN_GENERATED_KEYS)) {
@@ -173,8 +163,6 @@ public class NoteDAO {
     // Update a note
     public static boolean updateNote(Note note) {
         String query = "UPDATE notes SET title = ?, content = ?, category_id = ? WHERE note_id = ?";
-        // Query to update an existing note
-        // Updates title, content, and category_id for a specific note_id
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(query)) {
@@ -199,7 +187,6 @@ public class NoteDAO {
     // Delete a note
     public static boolean deleteNote(int noteId) {
         String query = "DELETE FROM notes WHERE note_id = ?";
-        // Query to delete a note by its ID
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(query)) {

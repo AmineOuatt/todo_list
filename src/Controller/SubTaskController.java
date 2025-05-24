@@ -132,8 +132,6 @@ public class SubTaskController {
     // Delete all subtasks for a task
     public static boolean deleteSubTasksByTaskId(int taskId) {
         try (Connection conn = DatabaseConnection.getConnection()) {
-            // Query to delete all subtasks associated with a specific task
-            // Used when deleting a parent task to clean up related subtasks
             String sql = "DELETE FROM subtasks WHERE task_id = ?";
             PreparedStatement stmt = conn.prepareStatement(sql);
             stmt.setInt(1, taskId);

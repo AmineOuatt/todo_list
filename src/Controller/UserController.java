@@ -1,11 +1,8 @@
 package Controller;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import Model.CollaborationRequest;
 import Model.User;
 import Model.UserDAO;
+import java.util.List;
 
 public class UserController {
     private static User currentUser = null;
@@ -24,15 +21,6 @@ public class UserController {
 
     public static List<User> getAllUsers() {
         return UserDAO.getAllUsers();
-    }
-
-    /**
-     * Get a user by ID
-     * @param userId The ID of the user to retrieve
-     * @return The user with the specified ID, or null if not found
-     */
-    public static User getUserById(int userId) {
-        return UserDAO.getUserById(userId);
     }
 
     public static boolean authenticateUser(String username, String password) {
@@ -69,66 +57,5 @@ public class UserController {
 
     public static boolean isLoggedIn() {
         return currentUser != null;
-    }
-
-    public static boolean addCollaboration(int userId, int collaboratorId) {
-        return UserDAO.addCollaboration(userId, collaboratorId);
-    }
-
-    public static boolean removeCollaboration(int userId, int collaboratorId) {
-        return UserDAO.removeCollaboration(userId, collaboratorId);
-    }
-
-    public static List<User> getCollaborators(int userId) {
-        return UserDAO.getCollaborators(userId);
-    }
-
-    public static boolean isCollaborator(int userId, int collaboratorId) {
-        return UserDAO.isCollaborator(userId, collaboratorId);
-    }
-
-    public static List<User> searchUsersByUsername(String searchTerm) {
-        return UserDAO.searchUsersByUsername(searchTerm);
-    }
-
-    public static boolean sendCollaborationRequest(int senderId, int receiverId) {
-        if (senderId == receiverId) {
-            return false; // Can't send request to self
-        }
-        return UserDAO.sendCollaborationRequest(senderId, receiverId);
-    }
-
-    public static List<CollaborationRequest> getPendingRequests(int userId) {
-        return UserDAO.getPendingRequests(userId);
-    }
-
-    public static List<CollaborationRequest> getSentRequests(int userId) {
-        return UserDAO.getSentRequests(userId);
-    }
-
-    public static boolean respondToRequest(int requestId, String status) {
-        return UserDAO.respondToRequest(requestId, status);
-    }
-
-    public static boolean resendRequest(int requestId) {
-        return UserDAO.resendRequest(requestId);
-    }
-
-    public static List<CollaborationRequest> getAllRequests(int userId) {
-        List<CollaborationRequest> allRequests = new ArrayList<>();
-        
-        // Get sent requests
-        List<CollaborationRequest> sentRequests = UserDAO.getSentRequests(userId);
-        allRequests.addAll(sentRequests);
-        
-        // Get all received requests (not just pending ones)
-        List<CollaborationRequest> receivedRequests = UserDAO.getReceivedRequests(userId);
-        allRequests.addAll(receivedRequests);
-        
-        return allRequests;
-    }
-
-    public static boolean removeRequest(int requestId) {
-        return UserDAO.removeRequest(requestId);
     }
 }
