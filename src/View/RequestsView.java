@@ -9,6 +9,7 @@ import java.awt.Font;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import javax.swing.BorderFactory;
 import javax.swing.Box;
@@ -18,8 +19,11 @@ import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.JTextField;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 
 import Controller.UserController;
 import Model.CollaborationRequest;
@@ -37,7 +41,8 @@ public class RequestsView extends JPanel {
     
     private int currentUserId;
     private JPanel pendingRequestsPanel;
-    private JPanel sentRequestsPanel;
+    private JTextField searchField;
+    private List<CollaborationRequest> allPendingRequests;
     
     public RequestsView(int userId) {
         this.currentUserId = userId;
@@ -45,65 +50,85 @@ public class RequestsView extends JPanel {
         setBackground(BACKGROUND_COLOR);
         setBorder(new EmptyBorder(20, 20, 20, 20));
         
-        // Create tabbed pane for pending and sent requests
-        JPanel tabbedPane = new JPanel();
-        tabbedPane.setLayout(new BoxLayout(tabbedPane, BoxLayout.Y_AXIS));
-        tabbedPane.setBackground(BACKGROUND_COLOR);
+        // Create header panel with title and search
+        JPanel headerPanel = createHeaderPanel();
+        add(headerPanel, BorderLayout.NORTH);
         
         // Pending requests section
-        JLabel pendingTitle = new JLabel("Pending Requests");
-        pendingTitle.setFont(new Font("Segoe UI", Font.BOLD, 18));
-        pendingTitle.setForeground(TEXT_COLOR);
-        pendingTitle.setAlignmentX(Component.LEFT_ALIGNMENT);
-        tabbedPane.add(pendingTitle);
-        tabbedPane.add(Box.createVerticalStrut(15));
-        
         pendingRequestsPanel = new JPanel();
         pendingRequestsPanel.setLayout(new BoxLayout(pendingRequestsPanel, BoxLayout.Y_AXIS));
         pendingRequestsPanel.setBackground(BACKGROUND_COLOR);
         JScrollPane pendingScrollPane = new JScrollPane(pendingRequestsPanel);
         pendingScrollPane.setBorder(BorderFactory.createEmptyBorder());
         pendingScrollPane.setBackground(BACKGROUND_COLOR);
-        tabbedPane.add(pendingScrollPane);
-        
-        // Sent requests section
-        tabbedPane.add(Box.createVerticalStrut(20));
-        JLabel sentTitle = new JLabel("Sent Requests");
-        sentTitle.setFont(new Font("Segoe UI", Font.BOLD, 18));
-        sentTitle.setForeground(TEXT_COLOR);
-        sentTitle.setAlignmentX(Component.LEFT_ALIGNMENT);
-        tabbedPane.add(sentTitle);
-        tabbedPane.add(Box.createVerticalStrut(15));
-        
-        sentRequestsPanel = new JPanel();
-        sentRequestsPanel.setLayout(new BoxLayout(sentRequestsPanel, BoxLayout.Y_AXIS));
-        sentRequestsPanel.setBackground(BACKGROUND_COLOR);
-        JScrollPane sentScrollPane = new JScrollPane(sentRequestsPanel);
-        sentScrollPane.setBorder(BorderFactory.createEmptyBorder());
-        sentScrollPane.setBackground(BACKGROUND_COLOR);
-        tabbedPane.add(sentScrollPane);
-        
-        add(tabbedPane, BorderLayout.CENTER);
+        add(pendingScrollPane, BorderLayout.CENTER);
         
         // Load requests
         loadRequests();
     }
     
+    private JPanel createHeaderPanel() {
+        JPanel panel = new JPanel(new BorderLayout(10, 0));
+        panel.setBackground(BACKGROUND_COLOR);
+        panel.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createMatteBorder(0, 0, 1, 0, BORDER_COLOR),
+            new EmptyBorder(0, 0, 15, 0)
+        ));
+        
+        // Title
+        JLabel titleLabel = new JLabel("Pending Requests");
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 24));
+        titleLabel.setForeground(TEXT_COLOR);
+        panel.add(titleLabel, BorderLayout.WEST);
+        
+        // Search panel
+        JPanel searchPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        searchPanel.setBackground(BACKGROUND_COLOR);
+        
+        // Search field
+        searchField = new JTextField(20);
+        searchField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        searchField.putClientProperty("JTextField.placeholderText", "Search by user...");
+        searchField.getDocument().addDocumentListener(new DocumentListener() {
+            public void changedUpdate(DocumentEvent e) { filterRequests(); }
+            public void removeUpdate(DocumentEvent e) { filterRequests(); }
+            public void insertUpdate(DocumentEvent e) { filterRequests(); }
+        });
+        
+        searchPanel.add(new JLabel("Search:"));
+        searchPanel.add(searchField);
+        
+        panel.add(searchPanel, BorderLayout.EAST);
+        
+        return panel;
+    }
+    
     private void loadRequests() {
         // Clear panels
         pendingRequestsPanel.removeAll();
-        sentRequestsPanel.removeAll();
         
         // Load pending requests
-        List<CollaborationRequest> pendingRequests = UserController.getPendingRequests(currentUserId);
-        if (pendingRequests.isEmpty()) {
-            JLabel emptyLabel = new JLabel("No pending requests.");
+        allPendingRequests = UserController.getPendingRequests(currentUserId);
+        filterRequests();
+    }
+    
+    private void filterRequests() {
+        pendingRequestsPanel.removeAll();
+        
+        String searchText = searchField.getText().toLowerCase();
+        
+        List<CollaborationRequest> filteredRequests = allPendingRequests.stream()
+            .filter(request -> request.getOtherUserName().toLowerCase().contains(searchText))
+            .collect(Collectors.toList());
+        
+        if (filteredRequests.isEmpty()) {
+            JLabel emptyLabel = new JLabel("No pending requests found.");
             emptyLabel.setFont(new Font("Segoe UI", Font.ITALIC, 14));
             emptyLabel.setForeground(new Color(128, 128, 128));
             emptyLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
             pendingRequestsPanel.add(emptyLabel);
         } else {
-            for (CollaborationRequest request : pendingRequests) {
+            for (CollaborationRequest request : filteredRequests) {
                 JPanel requestCard = createRequestCard(request);
                 requestCard.setAlignmentX(Component.LEFT_ALIGNMENT);
                 pendingRequestsPanel.add(requestCard);
@@ -111,27 +136,8 @@ public class RequestsView extends JPanel {
             }
         }
         
-        // Load sent requests
-        List<CollaborationRequest> sentRequests = UserController.getSentRequests(currentUserId);
-        if (sentRequests.isEmpty()) {
-            JLabel emptyLabel = new JLabel("No sent requests.");
-            emptyLabel.setFont(new Font("Segoe UI", Font.ITALIC, 14));
-            emptyLabel.setForeground(new Color(128, 128, 128));
-            emptyLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-            sentRequestsPanel.add(emptyLabel);
-        } else {
-            for (CollaborationRequest request : sentRequests) {
-                JPanel requestCard = createSentRequestCard(request);
-                requestCard.setAlignmentX(Component.LEFT_ALIGNMENT);
-                sentRequestsPanel.add(requestCard);
-                sentRequestsPanel.add(Box.createVerticalStrut(10));
-            }
-        }
-        
         pendingRequestsPanel.revalidate();
         pendingRequestsPanel.repaint();
-        sentRequestsPanel.revalidate();
-        sentRequestsPanel.repaint();
     }
     
     private JPanel createRequestCard(CollaborationRequest request) {
@@ -179,54 +185,6 @@ public class RequestsView extends JPanel {
         return card;
     }
     
-    private JPanel createSentRequestCard(CollaborationRequest request) {
-        JPanel card = new JPanel(new BorderLayout(10, 0));
-        card.setBackground(CARD_COLOR);
-        card.setBorder(BorderFactory.createCompoundBorder(
-                new LineBorder(BORDER_COLOR),
-                new EmptyBorder(10, 15, 10, 15)));
-        
-        // User info
-        JPanel infoPanel = new JPanel();
-        infoPanel.setLayout(new BoxLayout(infoPanel, BoxLayout.Y_AXIS));
-        infoPanel.setBackground(CARD_COLOR);
-        
-        JLabel nameLabel = new JLabel(request.getOtherUserName());
-        nameLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        nameLabel.setForeground(TEXT_COLOR);
-        
-        JLabel statusLabel = new JLabel("Status: " + request.getStatus());
-        statusLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        statusLabel.setForeground(getStatusColor(request.getStatus()));
-        
-        JLabel dateLabel = new JLabel("Sent " + formatDate(request.getCreatedAt()));
-        dateLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        dateLabel.setForeground(new Color(128, 128, 128));
-        
-        infoPanel.add(nameLabel);
-        infoPanel.add(Box.createVerticalStrut(5));
-        infoPanel.add(statusLabel);
-        infoPanel.add(Box.createVerticalStrut(5));
-        infoPanel.add(dateLabel);
-        
-        // Resend button (only for declined requests)
-        if (request.isDeclined()) {
-            JButton resendButton = new JButton("Resend");
-            styleButton(resendButton, true);
-            resendButton.addActionListener(e -> resendRequest(request));
-            
-            JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-            buttonPanel.setBackground(CARD_COLOR);
-            buttonPanel.add(resendButton);
-            
-            card.add(buttonPanel, BorderLayout.EAST);
-        }
-        
-        card.add(infoPanel, BorderLayout.CENTER);
-        
-        return card;
-    }
-    
     private void respondToRequest(CollaborationRequest request, String status) {
         if (UserController.respondToRequest(request.getRequestId(), status)) {
             loadRequests();
@@ -235,30 +193,6 @@ public class RequestsView extends JPanel {
                     "Unable to " + status + " the request.",
                     "Error",
                     JOptionPane.ERROR_MESSAGE);
-        }
-    }
-    
-    private void resendRequest(CollaborationRequest request) {
-        if (UserController.resendRequest(request.getRequestId())) {
-            loadRequests();
-        } else {
-            JOptionPane.showMessageDialog(this,
-                    "Unable to resend the request.",
-                    "Error",
-                    JOptionPane.ERROR_MESSAGE);
-        }
-    }
-    
-    private Color getStatusColor(String status) {
-        switch (status.toLowerCase()) {
-            case "accepted":
-                return COMPLETED_COLOR;
-            case "pending":
-                return PENDING_COLOR;
-            case "declined":
-                return DECLINED_COLOR;
-            default:
-                return TEXT_COLOR;
         }
     }
     

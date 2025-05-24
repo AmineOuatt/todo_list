@@ -3,7 +3,6 @@ package View;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
-import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
 import java.sql.Timestamp;
@@ -11,7 +10,14 @@ import java.text.SimpleDateFormat;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import javax.swing.*;
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.JComboBox;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTextField;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
 import javax.swing.event.DocumentEvent;
@@ -69,11 +75,21 @@ public class RequestStatusView extends JPanel {
             new EmptyBorder(0, 0, 15, 0)
         ));
         
-        // Title
+        // Title and count panel
+        JPanel titlePanel = new JPanel(new BorderLayout(10, 0));
+        titlePanel.setBackground(BACKGROUND_COLOR);
+        
         JLabel titleLabel = new JLabel("Request Status");
         titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 24));
         titleLabel.setForeground(TEXT_COLOR);
-        panel.add(titleLabel, BorderLayout.WEST);
+        
+        JLabel countLabel = new JLabel("0 requests");
+        countLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        countLabel.setForeground(new Color(128, 128, 128));
+        
+        titlePanel.add(titleLabel, BorderLayout.WEST);
+        titlePanel.add(countLabel, BorderLayout.EAST);
+        panel.add(titlePanel, BorderLayout.WEST);
         
         // Search and filter panel
         JPanel searchFilterPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
@@ -125,6 +141,14 @@ public class RequestStatusView extends JPanel {
                 return matchesSearch && matchesStatus;
             })
             .collect(Collectors.toList());
+        
+        // Update count label
+        JLabel countLabel = (JLabel) ((JPanel) ((JPanel) getComponent(0)).getComponent(0)).getComponent(1);
+        if (filteredRequests.size() == allRequests.size()) {
+            countLabel.setText(allRequests.size() + " requests");
+        } else {
+            countLabel.setText(filteredRequests.size() + " of " + allRequests.size() + " requests");
+        }
         
         if (filteredRequests.isEmpty()) {
             JLabel emptyLabel = new JLabel("No requests found.");
