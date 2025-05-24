@@ -6,7 +6,6 @@ import java.net.URLClassLoader;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.Properties;
 
 public class DatabaseConnection {
@@ -105,44 +104,6 @@ public class DatabaseConnection {
             }
         } else {
             System.out.println("Connection test failed.");
-        }
-    }
-
-    /**
-     * Exécute un script SQL à partir d'un fichier
-     * @param scriptPath Chemin vers le fichier SQL
-     * @return true si l'exécution a réussi, false sinon
-     */
-    public static boolean executeSQLScript(String scriptPath) {
-        try (Connection conn = getConnection();
-             Statement stmt = conn.createStatement()) {
-            
-            // Lire le contenu du fichier SQL
-            java.nio.file.Path path = java.nio.file.Paths.get(scriptPath);
-            String sql = new String(java.nio.file.Files.readAllBytes(path));
-            
-            // Séparer les instructions SQL (chaque instruction se termine par un point-virgule)
-            String[] sqlInstructions = sql.split(";");
-            
-            // Exécuter chaque instruction
-            for (String instruction : sqlInstructions) {
-                instruction = instruction.trim();
-                if (!instruction.isEmpty()) {
-                    try {
-                        stmt.execute(instruction);
-                    } catch (SQLException e) {
-                        System.out.println("Erreur lors de l'exécution de l'instruction: " + instruction);
-                        System.out.println("Message d'erreur: " + e.getMessage());
-                        // Continuer avec les autres instructions malgré l'erreur
-                    }
-                }
-            }
-            
-            return true;
-        } catch (Exception e) {
-            System.out.println("Erreur lors de l'exécution du script SQL: " + e.getMessage());
-            e.printStackTrace();
-            return false;
         }
     }
 }

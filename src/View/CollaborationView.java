@@ -10,15 +10,10 @@ import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.GridLayout;
-import java.awt.Point;
-import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.event.ActionEvent;
-import java.awt.event.KeyAdapter;
-import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.awt.event.MouseListener;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -37,21 +32,16 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JProgressBar;
 import javax.swing.JScrollPane;
-import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.SwingConstants;
-import javax.swing.SwingUtilities;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
-import javax.swing.JViewport;
 
-import Controller.CommentController;
 import Controller.SubTaskController;
 import Controller.TaskController;
 import Controller.UserController;
-import Model.Comment;
 import Model.SubTask;
 import Model.Task;
 import Model.User;
@@ -73,13 +63,6 @@ public class CollaborationView extends JPanel {
     private JTextField searchField;
     private JList<User> searchResults;
     private DefaultListModel<User> searchResultsModel;
-    
-    // Nouveaux éléments pour afficher les tâches collaboratives
-    private JPanel sharedTasksPanel;
-    private List<Task> sharedTasks;
-    private Task selectedTask;
-    private List<Comment> currentComments = new ArrayList<>();
-    private JPanel commentsPanel;
 
     public CollaborationView(int userId) {
         this.currentUserId = userId;
@@ -91,35 +74,30 @@ public class CollaborationView extends JPanel {
         JPanel headerPanel = createHeaderPanel();
         add(headerPanel, BorderLayout.NORTH);
         
-        // Panneau principal avec défilement
-        JPanel contentPanel = new JPanel();
-        contentPanel.setLayout(new BoxLayout(contentPanel, BoxLayout.Y_AXIS));
-        contentPanel.setBackground(BACKGROUND_COLOR);
+        // Panneau principal
+        JPanel mainPanel = new JPanel(new BorderLayout());
+        mainPanel.setBackground(BACKGROUND_COLOR);
+        mainPanel.setBorder(new EmptyBorder(20, 0, 0, 0));
         
         // Panneau de gauche: liste des collaborateurs
         collaboratorsPanel = createCollaboratorsPanel();
-        collaboratorsPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        contentPanel.add(collaboratorsPanel);
-        contentPanel.add(Box.createVerticalStrut(20));
+        JScrollPane collaboratorsScrollPane = new JScrollPane(collaboratorsPanel);
+        collaboratorsScrollPane.setBorder(BorderFactory.createEmptyBorder());
+        collaboratorsScrollPane.setBackground(BACKGROUND_COLOR);
         
         // Panneau de droite: statistiques
         statisticsPanel = createStatisticsPanel();
-        statisticsPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        contentPanel.add(statisticsPanel);
-        contentPanel.add(Box.createVerticalStrut(20));
+        JScrollPane statisticsScrollPane = new JScrollPane(statisticsPanel);
+        statisticsScrollPane.setBorder(BorderFactory.createEmptyBorder());
+        statisticsScrollPane.setBackground(BACKGROUND_COLOR);
         
-        // Nouveau panneau pour les tâches collaboratives
-        sharedTasksPanel = createSharedTasksPanel();
-        sharedTasksPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        contentPanel.add(sharedTasksPanel);
+        // Divise l'écran en deux parties
+        mainPanel.add(collaboratorsScrollPane, BorderLayout.WEST);
+        mainPanel.add(statisticsScrollPane, BorderLayout.CENTER);
         
-        JScrollPane scrollPane = new JScrollPane(contentPanel);
-        scrollPane.setBorder(BorderFactory.createEmptyBorder());
-        scrollPane.setBackground(BACKGROUND_COLOR);
-        add(scrollPane, BorderLayout.CENTER);
+        add(mainPanel, BorderLayout.CENTER);
         
         loadCollaborators();
-        loadSharedTasks();
     }
     
     private JPanel createHeaderPanel() {
@@ -783,409 +761,5 @@ public class CollaborationView extends JPanel {
         public UserStats(String username) {
             this.username = username;
         }
-    }
-    
-    // Méthode pour créer le panneau des tâches collaboratives
-    private JPanel createSharedTasksPanel() {
-        JPanel panel = new JPanel();
-        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-        panel.setBackground(BACKGROUND_COLOR);
-        
-        JLabel titleLabel = new JLabel("Shared Tasks");
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
-        titleLabel.setForeground(TEXT_COLOR);
-        titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        panel.add(titleLabel);
-        panel.add(Box.createVerticalStrut(15));
-        
-        JPanel tasksContainer = new JPanel();
-        tasksContainer.setLayout(new BoxLayout(tasksContainer, BoxLayout.Y_AXIS));
-        tasksContainer.setBackground(BACKGROUND_COLOR);
-        tasksContainer.setAlignmentX(Component.LEFT_ALIGNMENT);
-        
-        JLabel helpText = new JLabel("Loading shared tasks...");
-        helpText.setFont(new Font("Segoe UI", Font.ITALIC, 14));
-        helpText.setForeground(new Color(128, 128, 128));
-        helpText.setAlignmentX(Component.LEFT_ALIGNMENT);
-        tasksContainer.add(helpText);
-        
-        panel.add(tasksContainer);
-        
-        // Panneau pour les commentaires
-        JPanel commentsContainer = new JPanel();
-        commentsContainer.setName("commentsContainer"); // Ajout d'un nom pour l'identifier facilement
-        commentsContainer.setLayout(new BorderLayout());
-        commentsContainer.setBackground(CARD_COLOR);
-        commentsContainer.setBorder(BorderFactory.createCompoundBorder(
-                new LineBorder(BORDER_COLOR),
-                new EmptyBorder(15, 15, 15, 15)));
-        commentsContainer.setAlignmentX(Component.LEFT_ALIGNMENT);
-        commentsContainer.setVisible(false); // Caché initialement
-        
-        JLabel commentsTitle = new JLabel("Comments");
-        commentsTitle.setFont(new Font("Segoe UI", Font.BOLD, 16));
-        commentsTitle.setForeground(TEXT_COLOR);
-        
-        commentsPanel = new JPanel();
-        commentsPanel.setLayout(new BoxLayout(commentsPanel, BoxLayout.Y_AXIS));
-        commentsPanel.setBackground(CARD_COLOR);
-        
-        JScrollPane commentScroll = new JScrollPane(commentsPanel);
-        commentScroll.setBorder(BorderFactory.createEmptyBorder());
-        commentScroll.setPreferredSize(new Dimension(0, 200));
-        
-        // Panneau pour ajouter un commentaire
-        JPanel addCommentPanel = new JPanel(new BorderLayout(10, 0));
-        addCommentPanel.setBackground(CARD_COLOR);
-        addCommentPanel.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 0));
-        
-        JTextArea commentField = new JTextArea();
-        commentField.setLineWrap(true);
-        commentField.setWrapStyleWord(true);
-        commentField.setRows(2);
-        commentField.setBorder(BorderFactory.createCompoundBorder(
-                new LineBorder(BORDER_COLOR),
-                BorderFactory.createEmptyBorder(5, 5, 5, 5)));
-        
-        JButton addButton = new JButton("Add");
-        styleButton(addButton, true);
-        addButton.setPreferredSize(new Dimension(80, 35));
-        
-        addCommentPanel.add(commentField, BorderLayout.CENTER);
-        addCommentPanel.add(addButton, BorderLayout.EAST);
-        
-        commentsContainer.add(commentsTitle, BorderLayout.NORTH);
-        commentsContainer.add(commentScroll, BorderLayout.CENTER);
-        commentsContainer.add(addCommentPanel, BorderLayout.SOUTH);
-        
-        panel.add(Box.createVerticalStrut(10));
-        panel.add(commentsContainer);
-        
-        // Écouteur pour ajouter un commentaire
-        addButton.addActionListener(e -> {
-            if (selectedTask != null) {
-                String content = commentField.getText().trim();
-                if (!content.isEmpty()) {
-                    if (CommentController.addComment(selectedTask.getTaskId(), currentUserId, content)) {
-                        commentField.setText("");
-                        loadComments(selectedTask.getTaskId());
-                        JOptionPane.showMessageDialog(this, 
-                                "Commentaire ajouté avec succès.", 
-                                "Succès", 
-                                JOptionPane.INFORMATION_MESSAGE);
-                    } else {
-                        JOptionPane.showMessageDialog(this, 
-                                "Erreur lors de l'ajout du commentaire.", 
-                                "Erreur", 
-                                JOptionPane.ERROR_MESSAGE);
-                    }
-                }
-            }
-        });
-        
-        // Validation avec la touche Entrée (Ctrl+Enter pour soumettre)
-        commentField.addKeyListener(new KeyAdapter() {
-            @Override
-            public void keyPressed(KeyEvent e) {
-                if (e.getKeyCode() == KeyEvent.VK_ENTER && e.isControlDown()) {
-                    addButton.doClick();
-                    e.consume();
-                }
-            }
-        });
-        
-        return panel;
-    }
-    
-    // Méthode pour charger les tâches partagées
-    private void loadSharedTasks() {
-        // Trouver le container des tâches et le vider
-        JPanel tasksContainer = null;
-        for (Component comp : sharedTasksPanel.getComponents()) {
-            if (comp instanceof JPanel && comp != findCommentsContainer()) {
-                tasksContainer = (JPanel) comp;
-                break;
-            }
-        }
-        
-        if (tasksContainer != null) {
-            tasksContainer.removeAll();
-            
-            // Récupérer toutes les tâches accessibles (propres et partagées)
-            sharedTasks = TaskController.getAllAccessibleTasks(currentUserId);
-            
-            if (sharedTasks.isEmpty()) {
-                JLabel emptyLabel = new JLabel("No shared tasks available");
-                emptyLabel.setFont(new Font("Segoe UI", Font.ITALIC, 14));
-                emptyLabel.setForeground(new Color(128, 128, 128));
-                emptyLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-                tasksContainer.add(emptyLabel);
-            } else {
-                for (Task task : sharedTasks) {
-                    JPanel taskCard = createTaskCard(task);
-                    taskCard.setAlignmentX(Component.LEFT_ALIGNMENT);
-                    tasksContainer.add(taskCard);
-                    tasksContainer.add(Box.createVerticalStrut(10));
-                }
-            }
-            
-            tasksContainer.revalidate();
-            tasksContainer.repaint();
-        }
-    }
-    
-    // Méthode pour trouver le conteneur des commentaires
-    private JPanel findCommentsContainer() {
-        for (Component comp : sharedTasksPanel.getComponents()) {
-            if (comp instanceof JPanel) {
-                JPanel panel = (JPanel) comp;
-                if ("commentsContainer".equals(panel.getName())) {
-                    return panel;
-                }
-            }
-        }
-        return null; // Pas trouvé
-    }
-    
-    // Méthode pour créer une carte pour une tâche
-    private JPanel createTaskCard(Task task) {
-        JPanel card = new JPanel(new BorderLayout(10, 10));
-        card.setBackground(CARD_COLOR);
-        card.setBorder(BorderFactory.createCompoundBorder(
-                new LineBorder(BORDER_COLOR),
-                new EmptyBorder(15, 15, 15, 15)));
-        
-        // En-tête de la tâche
-        JPanel headerPanel = new JPanel(new BorderLayout());
-        headerPanel.setBackground(CARD_COLOR);
-        
-        String ownerName = "Unknown";
-        User owner = UserController.getUserById(task.getUserId());
-        if (owner != null) {
-            ownerName = owner.getUsername();
-        }
-        
-        // Statut + titre
-        JPanel titlePanel = new JPanel(new BorderLayout(5, 0));
-        titlePanel.setBackground(CARD_COLOR);
-        
-        // Indicateur de statut
-        JPanel statusIndicator = new JPanel();
-        statusIndicator.setPreferredSize(new Dimension(10, 20));
-        if ("Completed".equalsIgnoreCase(task.getStatus())) {
-            statusIndicator.setBackground(COMPLETED_COLOR);
-        } else if ("In Progress".equalsIgnoreCase(task.getStatus())) {
-            statusIndicator.setBackground(IN_PROGRESS_COLOR);
-        } else {
-            statusIndicator.setBackground(PENDING_COLOR);
-        }
-        
-        JLabel titleLabel = new JLabel(task.getTitle());
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
-        titleLabel.setForeground(TEXT_COLOR);
-        
-        titlePanel.add(statusIndicator, BorderLayout.WEST);
-        titlePanel.add(titleLabel, BorderLayout.CENTER);
-        
-        // Date d'échéance si présente
-        String dueDateStr = "";
-        if (task.getDate() != null) {
-            SimpleDateFormat dateFormat = new SimpleDateFormat("MMM d, yyyy");
-            dueDateStr = dateFormat.format(task.getDate());
-        }
-        
-        JLabel ownerLabel = new JLabel("By: " + ownerName + (dueDateStr.isEmpty() ? "" : " • Due: " + dueDateStr));
-        ownerLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        ownerLabel.setForeground(new Color(128, 128, 128));
-        
-        headerPanel.add(titlePanel, BorderLayout.NORTH);
-        headerPanel.add(ownerLabel, BorderLayout.SOUTH);
-        
-        // Description de la tâche
-        JLabel descLabel = new JLabel("<html><body>" + (task.getDescription() != null ? task.getDescription() : "No description") + "</body></html>");
-        descLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        descLabel.setForeground(TEXT_COLOR);
-        
-        // Compteur de commentaires
-        List<Comment> comments = CommentController.getCommentsByTaskId(task.getTaskId());
-        JLabel commentCountLabel = new JLabel(comments.size() + " comment(s)");
-        commentCountLabel.setFont(new Font("Segoe UI", Font.ITALIC, 12));
-        commentCountLabel.setForeground(new Color(128, 128, 128));
-        
-        card.add(headerPanel, BorderLayout.NORTH);
-        card.add(descLabel, BorderLayout.CENTER);
-        card.add(commentCountLabel, BorderLayout.SOUTH);
-        
-        // Écouteur de clic pour afficher les commentaires
-        card.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                selectedTask = task;
-                loadComments(task.getTaskId());
-                
-                // Trouver le panneau des commentaires et l'afficher
-                JPanel commentsContainer = findCommentsContainer();
-                if (commentsContainer != null) {
-                    commentsContainer.setVisible(true);
-                } else {
-                    System.err.println("Panneau de commentaires introuvable !");
-                }
-                
-                // Sélection visuelle de la tâche
-                // Restaurer la couleur de toutes les tâches
-                JPanel parent = (JPanel)card.getParent();
-                for (Component comp : parent.getComponents()) {
-                    if (comp instanceof JPanel) {
-                        comp.setBackground(CARD_COLOR);
-                    }
-                }
-                // Mettre en évidence la tâche sélectionnée
-                card.setBackground(new Color(240, 247, 255)); // Couleur de sélection
-                
-                // Faire défiler jusqu'au panneau de commentaires
-                JScrollPane scrollPane = (JScrollPane) SwingUtilities.getAncestorOfClass(JScrollPane.class, sharedTasksPanel);
-                if (scrollPane != null) {
-                    JViewport viewport = scrollPane.getViewport();
-                    Rectangle bounds = commentsContainer.getBounds();
-                    viewport.setViewPosition(new Point(0, bounds.y));
-                }
-                
-                // Assurer que l'UI est mise à jour
-                sharedTasksPanel.revalidate();
-                sharedTasksPanel.repaint();
-            }
-        });
-        
-        return card;
-    }
-    
-    // Méthode pour charger les commentaires d'une tâche
-    private void loadComments(int taskId) {
-        // Vider le panneau des commentaires
-        commentsPanel.removeAll();
-        
-        // Récupérer les commentaires
-        currentComments = CommentController.getCommentsByTaskId(taskId);
-        
-        if (currentComments.isEmpty()) {
-            JLabel noCommentsLabel = new JLabel("Aucun commentaire pour cette tâche.");
-            noCommentsLabel.setFont(new Font("Segoe UI", Font.ITALIC, 14));
-            noCommentsLabel.setForeground(new Color(150, 150, 150));
-            noCommentsLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-            noCommentsLabel.setBorder(BorderFactory.createEmptyBorder(10, 0, 10, 0));
-            commentsPanel.add(noCommentsLabel);
-        } else {
-            // Ajouter chaque commentaire au panneau
-            for (Comment comment : currentComments) {
-                commentsPanel.add(createCommentPanel(comment));
-                // Ajouter un peu d'espace entre les commentaires
-                commentsPanel.add(Box.createRigidArea(new Dimension(0, 10)));
-            }
-        }
-        
-        commentsPanel.revalidate();
-        commentsPanel.repaint();
-    }
-    
-    // Méthode pour créer un panneau de commentaire
-    private JPanel createCommentPanel(Comment comment) {
-        JPanel panel = new JPanel(new BorderLayout(10, 5));
-        panel.setBackground(CARD_COLOR);
-        panel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(BORDER_COLOR),
-                BorderFactory.createEmptyBorder(10, 15, 10, 15)
-        ));
-        panel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 150));
-        panel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        
-        // En-tête avec nom de l'utilisateur et date
-        JPanel headerPanel = new JPanel(new BorderLayout());
-        headerPanel.setBackground(CARD_COLOR);
-        
-        // Utilisateur
-        String username = comment.getAuthor() != null ? comment.getAuthor().getUsername() : "Utilisateur";
-        JLabel userLabel = new JLabel(username);
-        userLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        userLabel.setForeground(TEXT_COLOR);
-        headerPanel.add(userLabel, BorderLayout.WEST);
-        
-        // Date
-        SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm");
-        JLabel dateLabel = new JLabel(sdf.format(comment.getCreatedDate()));
-        dateLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        dateLabel.setForeground(new Color(150, 150, 150));
-        headerPanel.add(dateLabel, BorderLayout.EAST);
-        
-        // Contenu du commentaire
-        JTextArea contentArea = new JTextArea(comment.getContent());
-        contentArea.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        contentArea.setLineWrap(true);
-        contentArea.setWrapStyleWord(true);
-        contentArea.setOpaque(false);
-        contentArea.setEditable(false);
-        contentArea.setBorder(null);
-        
-        // Panel pour les boutons (modifier, supprimer)
-        JPanel actionsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        actionsPanel.setBackground(CARD_COLOR);
-        
-        // Seulement montrer les actions si le commentaire appartient à l'utilisateur actuel
-        if (comment.getUserId() == currentUserId) {
-            JButton editButton = new JButton("Modifier");
-            editButton.setBorder(BorderFactory.createEmptyBorder(3, 8, 3, 8));
-            editButton.setFocusPainted(false);
-            editButton.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-            editButton.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
-            
-            JButton deleteButton = new JButton("Supprimer");
-            deleteButton.setBorder(BorderFactory.createEmptyBorder(3, 8, 3, 8));
-            deleteButton.setFocusPainted(false);
-            deleteButton.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-            deleteButton.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
-            
-            // Écouteurs d'événements
-            editButton.addActionListener(e -> {
-                String newContent = JOptionPane.showInputDialog(
-                        this, 
-                        "Modifier le commentaire :", 
-                        comment.getContent()
-                );
-                if (newContent != null && !newContent.trim().isEmpty()) {
-                    if (CommentController.updateComment(comment.getCommentId(), currentUserId, newContent.trim())) {
-                        // Recharger les commentaires
-                        if (selectedTask != null) {
-                            loadComments(selectedTask.getTaskId());
-                        }
-                    }
-                }
-            });
-            
-            deleteButton.addActionListener(e -> {
-                int response = JOptionPane.showConfirmDialog(
-                        this,
-                        "Êtes-vous sûr de vouloir supprimer ce commentaire ?",
-                        "Confirmation",
-                        JOptionPane.YES_NO_OPTION
-                );
-                if (response == JOptionPane.YES_OPTION) {
-                    if (CommentController.deleteComment(comment.getCommentId(), currentUserId)) {
-                        // Recharger les commentaires
-                        if (selectedTask != null) {
-                            loadComments(selectedTask.getTaskId());
-                        }
-                    }
-                }
-            });
-            
-            actionsPanel.add(editButton);
-            actionsPanel.add(deleteButton);
-        }
-        
-        // Assembler tous les éléments
-        panel.add(headerPanel, BorderLayout.NORTH);
-        panel.add(contentArea, BorderLayout.CENTER);
-        panel.add(actionsPanel, BorderLayout.SOUTH);
-        
-        return panel;
     }
 } 

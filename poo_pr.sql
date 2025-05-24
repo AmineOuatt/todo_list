@@ -124,20 +124,6 @@ CREATE TABLE `recurring_patterns` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `task_comments`
---
-
-CREATE TABLE `task_comments` (
-  `comment_id` int(11) NOT NULL,
-  `task_id` int(11) NOT NULL,
-  `user_id` int(11) NOT NULL,
-  `content` text NOT NULL,
-  `created_date` timestamp NOT NULL DEFAULT current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
--- --------------------------------------------------------
-
---
 -- Table structure for table `tasks`
 --
 
@@ -246,14 +232,6 @@ ALTER TABLE `subtasks`
   ADD KEY `idx_subtasks_task_id` (`task_id`);
 
 --
--- Indexes for table `task_comments`
---
-ALTER TABLE `task_comments`
-  ADD PRIMARY KEY (`comment_id`),
-  ADD KEY `idx_task_comments_task_id` (`task_id`),
-  ADD KEY `idx_task_comments_user_id` (`user_id`);
-
---
 -- Indexes for table `tasks`
 --
 ALTER TABLE `tasks`
@@ -314,12 +292,6 @@ ALTER TABLE `subtasks`
   MODIFY `subtask_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
--- AUTO_INCREMENT for table `task_comments`
---
-ALTER TABLE `task_comments`
-  MODIFY `comment_id` int(11) NOT NULL AUTO_INCREMENT;
-
---
 -- AUTO_INCREMENT for table `tasks`
 --
 ALTER TABLE `tasks`
@@ -360,13 +332,6 @@ ALTER TABLE `notes`
 --
 ALTER TABLE `subtasks`
   ADD CONSTRAINT `subtasks_ibfk_1` FOREIGN KEY (`task_id`) REFERENCES `tasks` (`task_id`) ON DELETE CASCADE;
-
---
--- Constraints for table `task_comments`
---
-ALTER TABLE `task_comments`
-  ADD CONSTRAINT `task_comments_ibfk_1` FOREIGN KEY (`task_id`) REFERENCES `tasks` (`task_id`) ON DELETE CASCADE,
-  ADD CONSTRAINT `task_comments_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `tasks`

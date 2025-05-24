@@ -18,10 +18,10 @@ import java.awt.GridLayout;
 import java.awt.Insets;
 import java.awt.RenderingHints;
 import java.awt.Toolkit;
-import java.awt.event.KeyAdapter;
-import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -71,7 +71,6 @@ import Model.Category;
 import Model.Note;
 import Model.SubTask;
 import Model.Task;
-import Model.Comment;
 
 public class TaskFrame extends JFrame {
     private int userId;
@@ -378,11 +377,9 @@ public class TaskFrame extends JFrame {
     private JPanel collaborationsPanel;
     private JButton collaborationsButton;
 
-    // Ajout des composants pour les commentaires
-    private JPanel commentsPanel;
-    private JPanel commentsContainer;
-    private List<Comment> currentComments = new ArrayList<>();
-
+    // Ajouter un champ pour suivre l'instance active du dashboard
+    private DashboardView activeDashboardView = null;
+    
     public TaskFrame(int userId) {
         this.userId = userId;
         
@@ -1769,10 +1766,6 @@ public class TaskFrame extends JFrame {
         panel.add(headerPanel, BorderLayout.NORTH);
         panel.add(horizontalSplitPane, BorderLayout.CENTER);
         
-        // Créer et ajouter le panneau de commentaires
-        JPanel commentsContainer = createCommentsPanel();
-        panel.add(commentsContainer, BorderLayout.SOUTH);
-        
         return panel;
     }
 
@@ -2388,23 +2381,23 @@ public class TaskFrame extends JFrame {
         taskListModel.clear();
         
         try {
-            // Load only the current user's own tasks, not shared tasks
-            List<Task> tasks = TaskController.getUserOwnTasks(userId);
+            // Get fresh data from the database - using normal tasks without occurrences for list view
+            List<Task> tasks = TaskController.getTasks(userId);
             
-            // Sort by priority and status
+            // Tri des tâches selon la priorité et le statut
             Collections.sort(tasks, (t1, t2) -> {
-                // First compare status (Pending and In Progress before Completed)
+                // D'abord, comparer les statuts (Pending et In Progress avant Completed)
                 boolean t1Completed = "Completed".equalsIgnoreCase(t1.getStatus());
                 boolean t2Completed = "Completed".equalsIgnoreCase(t2.getStatus());
                 
                 if (t1Completed && !t2Completed) return 1;
                 if (!t1Completed && t2Completed) return -1;
                 
-                // Then compare priorities
+                // Ensuite, si les statuts sont équivalents, comparer les priorités
                 String p1 = t1.getPriority() != null ? t1.getPriority() : "NORMAL";
                 String p2 = t2.getPriority() != null ? t2.getPriority() : "NORMAL";
                 
-                // Priority order: URGENT > HIGH > NORMAL > LOW
+                // Ordre de priorité: URGENT > HIGH > NORMAL > LOW
                 int p1Value = getPriorityValue(p1);
                 int p2Value = getPriorityValue(p2);
                 
@@ -2416,16 +2409,12 @@ public class TaskFrame extends JFrame {
                 taskListModel.addElement(task);
             }
             
-            // Refresh the dashboard and calendar views if needed
+            // Refresh the dashboard and calendar views
             if (dashboardPanel != null) {
                 updateDashboard();
             }
-            if (calendarPanel != null) {
-                ((CalendarPanel) calendarPanel).updateCalendar();
-            }
         } catch (Exception e) {
             System.out.println("Error loading tasks: " + e.getMessage());
-            e.printStackTrace();
         }
     }
     
@@ -2831,9 +2820,6 @@ public class TaskFrame extends JFrame {
         // Enable delete button since a task is selected
         deleteButton.setEnabled(true);
         
-        // Charger les commentaires de la tâche
-        loadComments(task.getTaskId());
-        
         // Show the task details panel
         showTaskDetailsView();
     }
@@ -2869,7 +2855,52 @@ public class TaskFrame extends JFrame {
             sidebarPanel.updateSelectedButton(name);
         }
         
-        // Utiliser mainContentPanel au lieu de sidebarContent pour changer la vue
+        // Pour le dashboard, on l'intègre directement dans l'interface principale
+        if (name.equals("DASHBOARD")) {
+            // On réinitialise le mainContentPanel
+            mainContentPanel.removeAll();
+            
+            // On crée une instance de DashboardView en mode JPanel (pas de nouvelle fenêtre)
+            DashboardView dashboard = new DashboardView(userId, this, false);
+            
+            // On l'ajoute directement au mainContentPanel
+            mainContentPanel.setLayout(new BorderLayout());
+            mainContentPanel.add(dashboard.getContentPanel(), BorderLayout.CENTER);
+            
+            // Suivre l'instance active de dashboard pour les mises à jour
+            activeDashboardView = dashboard;
+            
+            // Rafraîchir l'interface
+            mainContentPanel.revalidate();
+            mainContentPanel.repaint();
+            
+            return;
+        }
+        
+        // Rétablir le CardLayout si on passe à une autre vue
+        if (!(mainContentPanel.getLayout() instanceof CardLayout)) {
+            mainContentPanel.removeAll();
+            mainContentPanel.setLayout(new CardLayout());
+            
+            // Recréer tous les panneaux
+            JPanel taskViewPanel = new JPanel(new CardLayout());
+            taskViewPanel.add(createTaskListPanel(), "TASK_LIST");
+            taskViewPanel.add(createTaskDetailsPanel(), "TASK_DETAILS");
+            
+            mainContentPanel.add(taskViewPanel, "TASKS");
+            mainContentPanel.add(pomodoroPanel, "POMODORO");
+            mainContentPanel.add(dashboardPanel, "DASHBOARD");
+            mainContentPanel.add(calendarPanel, "CALENDAR");
+            
+            JPanel notesPanel = new JPanel(new CardLayout());
+            notesPanel.add(createNotesListPanel(), "NOTES_LIST");
+            notesPanel.add(createNoteDetailsPanel(), "NOTES_DETAILS");
+            mainContentPanel.add(notesPanel, "NOTES");
+            
+            mainContentPanel.add(collaborationsPanel, "COLLABORATIONS");
+        }
+        
+        // Utiliser CardLayout pour afficher le panneau demandé
         CardLayout cl = (CardLayout) mainContentPanel.getLayout();
         cl.show(mainContentPanel, name);
         
@@ -2878,17 +2909,10 @@ public class TaskFrame extends JFrame {
             // Rechercher le champ de recherche et le vider
             JTextField searchField = findSearchField();
             if (searchField != null) {
-                searchField.setText("");  // Ceci déclenchera un événement removeUpdate qui appellera filterTasks
-            } else {
-                // Si on ne trouve pas le champ de recherche, charger directement les tâches
-                loadTasks();
-                taskList.setModel(taskListModel);
+                searchField.setText("");  // Ceci déclenche la mise à jour de la liste
             }
-            showTaskListView();
         } else if (name.equals("POMODORO")) {
             // Nothing additional needed for Pomodoro view
-        } else if (name.equals("DASHBOARD")) {
-            updateDashboard();
         } else if (name.equals("NOTES")) {
             loadNotes();
             showNotesListView();
@@ -3038,11 +3062,12 @@ public class TaskFrame extends JFrame {
             }
             
             showTaskListView();
-            JOptionPane.showMessageDialog(this, "Tâche mise à jour avec succès!", "Succès", JOptionPane.INFORMATION_MESSAGE);
         } else {
-            JOptionPane.showMessageDialog(this, "Échec de la mise à jour de la tâche.\nVérifiez les champs et réessayez.", "Erreur", JOptionPane.ERROR_MESSAGE);
-            System.out.println("Échec de l'opération updateTask pour taskId=" + selectedTask.getTaskId());
+            JOptionPane.showMessageDialog(this, "Failed to update task!", "Error", JOptionPane.ERROR_MESSAGE);
         }
+        
+        // Ajouter à la fin de la méthode
+        refreshDashboardIfOpen();
     }
     
     /**
@@ -3087,6 +3112,9 @@ public class TaskFrame extends JFrame {
                     JOptionPane.ERROR_MESSAGE);
             }
         }
+        
+        // Ajouter à la fin de la méthode
+        refreshDashboardIfOpen();
     }
 
     /**
@@ -3246,6 +3274,9 @@ public class TaskFrame extends JFrame {
         } else {
             JOptionPane.showMessageDialog(this, "Failed to add task!", "Error", JOptionPane.ERROR_MESSAGE);
         }
+        
+        // Ajouter à la fin de la méthode
+        refreshDashboardIfOpen();
     }
 
     /**
@@ -3905,6 +3936,9 @@ public class TaskFrame extends JFrame {
         } else {
             JOptionPane.showMessageDialog(this, "Failed to save note", "Error", JOptionPane.ERROR_MESSAGE);
         }
+        
+        // Ajouter à la fin de la méthode
+        refreshDashboardIfOpen();
     }
 
     /**
@@ -3931,6 +3965,9 @@ public class TaskFrame extends JFrame {
                 JOptionPane.showMessageDialog(this, "Failed to delete note", "Error", JOptionPane.ERROR_MESSAGE);
             }
         }
+        
+        // Ajouter à la fin de la méthode
+        refreshDashboardIfOpen();
     }
 
     // Custom status icons for task list
@@ -4544,226 +4581,12 @@ public class TaskFrame extends JFrame {
             System.out.println("Error loading tasks by category and priority: " + e.getMessage());
         }
     }
-
-        /**     * Crée le panneau de commentaires pour la tâche sélectionnée     */    private JPanel createCommentsPanel() {        JPanel container = new JPanel(new BorderLayout(0, 10));        container.setBackground(BACKGROUND_COLOR);        container.setBorder(BorderFactory.createEmptyBorder(15, 0, 0, 0));        // Panneau d'en-tête avec titre et info        JPanel headerPanel = new JPanel(new BorderLayout(10, 0));        headerPanel.setBackground(BACKGROUND_COLOR);                // Titre du panneau        JLabel titleLabel = new JLabel("Commentaires");        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));        titleLabel.setForeground(TEXT_COLOR);        headerPanel.add(titleLabel, BorderLayout.WEST);                // Message d'information sur la collaboration        JLabel infoLabel = new JLabel("<html><i>Les commentaires sont visibles par tous les collaborateurs</i></html>");        infoLabel.setFont(new Font("Segoe UI", Font.ITALIC, 12));        infoLabel.setForeground(new Color(150, 150, 150));        headerPanel.add(infoLabel, BorderLayout.EAST);                container.add(headerPanel, BorderLayout.NORTH);
-        
-        // Zone de saisie du nouveau commentaire
-        JPanel addCommentPanel = new JPanel(new BorderLayout(10, 0));
-        addCommentPanel.setBackground(BACKGROUND_COLOR);
-        
-        JTextField commentField = new JTextField();
-        commentField.setPreferredSize(new Dimension(0, 40));
-        commentField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        commentField.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(BORDER_COLOR),
-            BorderFactory.createEmptyBorder(5, 10, 5, 10)
-        ));
-        commentField.putClientProperty("JTextField.placeholderText", "Ajouter un commentaire...");
-        
-        JButton addButton = new JButton("Ajouter");
-        addButton.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        addButton.setForeground(Color.WHITE);
-        addButton.setBackground(PRIMARY_COLOR);
-        addButton.setBorder(BorderFactory.createEmptyBorder(6, 15, 6, 15));
-        addButton.setFocusPainted(false);
-        addButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        
-        addCommentPanel.add(commentField, BorderLayout.CENTER);
-        addCommentPanel.add(addButton, BorderLayout.EAST);
-        
-        // Panneau qui contiendra la liste des commentaires
-        commentsPanel = new JPanel();
-        commentsPanel.setLayout(new BoxLayout(commentsPanel, BoxLayout.Y_AXIS));
-        commentsPanel.setBackground(BACKGROUND_COLOR);
-        
-        JScrollPane commentsScrollPane = new JScrollPane(commentsPanel);
-        commentsScrollPane.setBorder(BorderFactory.createEmptyBorder());
-        commentsScrollPane.setPreferredSize(new Dimension(0, 200));
-        commentsScrollPane.getVerticalScrollBar().setUnitIncrement(16);
-        
-        // Panneau principal des commentaires
-        JPanel commentsContent = new JPanel(new BorderLayout(0, 10));
-        commentsContent.setBackground(BACKGROUND_COLOR);
-        commentsContent.add(addCommentPanel, BorderLayout.NORTH);
-        commentsContent.add(commentsScrollPane, BorderLayout.CENTER);
-        
-        container.add(commentsContent, BorderLayout.CENTER);
-        
-        // Écouteur pour ajouter un commentaire
-        addButton.addActionListener(e -> {
-            String content = commentField.getText().trim();
-            if (!content.isEmpty() && taskList.getSelectedValue() != null) {
-                Task selectedTask = taskList.getSelectedValue();
-                if (Controller.CommentController.addComment(selectedTask.getTaskId(), userId, content)) {
-                    commentField.setText("");
-                    loadComments(selectedTask.getTaskId());
-                } else {
-                    JOptionPane.showMessageDialog(this, 
-                        "Erreur lors de l'ajout du commentaire.", 
-                        "Erreur", 
-                        JOptionPane.ERROR_MESSAGE);
-                }
-            }
-        });
-        
-        // Validation avec la touche Entrée
-        commentField.addKeyListener(new KeyAdapter() {
-            @Override
-            public void keyPressed(KeyEvent e) {
-                if (e.getKeyCode() == KeyEvent.VK_ENTER) {
-                    addButton.doClick();
-                }
-            }
-        });
-        
-        commentsContainer = container;
-        return container;
-    }
-
-    /**
-     * Charge les commentaires pour une tâche spécifique
-     */
-    private void loadComments(int taskId) {
-        // Vider le panneau des commentaires
-        commentsPanel.removeAll();
-        
-        // Récupérer les commentaires
-        currentComments = Controller.CommentController.getCommentsByTaskId(taskId);
-        
-        if (currentComments.isEmpty()) {
-            JLabel noCommentsLabel = new JLabel("Aucun commentaire pour cette tâche.");
-            noCommentsLabel.setFont(new Font("Segoe UI", Font.ITALIC, 14));
-            noCommentsLabel.setForeground(new Color(150, 150, 150));
-            noCommentsLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-            noCommentsLabel.setBorder(BorderFactory.createEmptyBorder(10, 0, 10, 0));
-            commentsPanel.add(noCommentsLabel);
-        } else {
-            // Ajouter chaque commentaire au panneau
-            for (Comment comment : currentComments) {
-                commentsPanel.add(createCommentPanel(comment));
-                // Ajouter un peu d'espace entre les commentaires
-                commentsPanel.add(Box.createRigidArea(new Dimension(0, 10)));
-            }
+    
+    // Méthode pour mettre à jour le dashboard si ouvert
+    private void refreshDashboardIfOpen() {
+        if (activeDashboardView != null) {
+            activeDashboardView.refreshDashboard();
         }
-        
-        commentsPanel.revalidate();
-        commentsPanel.repaint();
     }
-
-    /**
-     * Crée un panneau pour afficher un commentaire
-     */
-    private JPanel createCommentPanel(Comment comment) {
-        JPanel panel = new JPanel(new BorderLayout(10, 5));
-        panel.setBackground(CARD_COLOR);
-        panel.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(BORDER_COLOR),
-            BorderFactory.createEmptyBorder(10, 15, 10, 15)
-        ));
-        panel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 150));
-        panel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        
-        // En-tête avec nom de l'utilisateur et date
-        JPanel headerPanel = new JPanel(new BorderLayout());
-        headerPanel.setBackground(CARD_COLOR);
-        
-        // Utilisateur
-        String username = comment.getAuthor() != null ? comment.getAuthor().getUsername() : "Utilisateur";
-        JLabel userLabel = new JLabel(username);
-        userLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        userLabel.setForeground(TEXT_COLOR);
-        headerPanel.add(userLabel, BorderLayout.WEST);
-        
-        // Date
-        SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm");
-        JLabel dateLabel = new JLabel(sdf.format(comment.getCreatedDate()));
-        dateLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        dateLabel.setForeground(new Color(150, 150, 150));
-        headerPanel.add(dateLabel, BorderLayout.EAST);
-        
-        // Contenu du commentaire
-        JTextArea contentArea = new JTextArea(comment.getContent());
-        contentArea.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        contentArea.setLineWrap(true);
-        contentArea.setWrapStyleWord(true);
-        contentArea.setOpaque(false);
-        contentArea.setEditable(false);
-        contentArea.setBorder(null);
-        
-        // Panel pour les boutons (modifier, supprimer)
-        JPanel actionsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        actionsPanel.setBackground(CARD_COLOR);
-        
-        // Seulement montrer les actions si le commentaire appartient à l'utilisateur actuel
-        if (comment.getUserId() == userId) {
-            JButton editButton = new JButton("Modifier");
-            editButton.setBorder(BorderFactory.createEmptyBorder(3, 8, 3, 8));
-            editButton.setFocusPainted(false);
-            editButton.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-            editButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
-            
-            JButton deleteButton = new JButton("Supprimer");
-            deleteButton.setBorder(BorderFactory.createEmptyBorder(3, 8, 3, 8));
-            deleteButton.setFocusPainted(false);
-            deleteButton.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-            deleteButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
-            
-            // Écouteurs d'événements
-            editButton.addActionListener(e -> {
-                String newContent = JOptionPane.showInputDialog(
-                    this, 
-                    "Modifier le commentaire :", 
-                    comment.getContent()
-                );
-                if (newContent != null && !newContent.trim().isEmpty()) {
-                    if (Controller.CommentController.updateComment(comment.getCommentId(), userId, newContent.trim())) {
-                        // Recharger les commentaires
-                        Task selectedTask = taskList.getSelectedValue();
-                        if (selectedTask != null) {
-                            loadComments(selectedTask.getTaskId());
-                        }
-                    }
-                }
-            });
-            
-            deleteButton.addActionListener(e -> {
-                int response = JOptionPane.showConfirmDialog(
-                    this,
-                    "Êtes-vous sûr de vouloir supprimer ce commentaire ?",
-                    "Confirmation",
-                    JOptionPane.YES_NO_OPTION
-                );
-                if (response == JOptionPane.YES_OPTION) {
-                    if (Controller.CommentController.deleteComment(comment.getCommentId(), userId)) {
-                        // Recharger les commentaires
-                        Task selectedTask = taskList.getSelectedValue();
-                        if (selectedTask != null) {
-                            loadComments(selectedTask.getTaskId());
-                        }
-                    }
-                }
-            });
-            
-            actionsPanel.add(editButton);
-            actionsPanel.add(deleteButton);
-        }
-        
-        // Assembler tous les éléments
-        panel.add(headerPanel, BorderLayout.NORTH);
-        panel.add(contentArea, BorderLayout.CENTER);
-        panel.add(actionsPanel, BorderLayout.SOUTH);
-        
-        return panel;
-    }
-
-    private void showTaskDetails(Task task) {
-        // ... existing code ...
-                // Enable delete button since a task is selected
-                deleteButton.setEnabled(true);
-                
-                // Charger les commentaires de la tâche
-                loadComments(task.getTaskId());
-                
-                // Show the task details panel
-                                showTaskDetailsView();            }        }
+}
         

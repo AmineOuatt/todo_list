@@ -9,8 +9,6 @@ import java.util.Calendar;
 import Model.Category;
 import Model.Task;
 import Model.TaskDAO;
-import Model.User;
-import Model.RecurringPattern;
 
 /**
  * Controller class for managing tasks
@@ -625,28 +623,6 @@ public class TaskController {
     }
     
     /**
-     * Récupère toutes les tâches accessibles à un utilisateur, incluant ses propres tâches
-     * et les tâches partagées par ses collaborateurs
-     * @param userId ID de l'utilisateur
-     * @return Liste des tâches accessibles à l'utilisateur
-     */
-    public static List<Task> getAllAccessibleTasks(int userId) {
-        // Récupérer les tâches propres à l'utilisateur
-        List<Task> tasks = new ArrayList<>();
-        
-        // Récupérer la liste des collaborateurs
-        List<User> collaborators = Controller.UserController.getCollaborators(userId);
-        
-        // Pour chaque collaborateur, récupérer ses tâches et les ajouter à notre liste
-        for (User collaborator : collaborators) {
-            List<Task> collaboratorTasks = TaskDAO.getTasksByUserId(collaborator.getUserId());
-            tasks.addAll(collaboratorTasks);
-        }
-        
-        return tasks;
-    }
-
-    /**
      * Check if a task is shared with a specific user
      * @param taskId The ID of the task to check
      * @param userId The ID of the user to check
@@ -701,14 +677,5 @@ public class TaskController {
         }
         
         return true;
-    }
-
-    /**
-     * Récupère uniquement les tâches propres à l'utilisateur (pas celles des collaborateurs)
-     * @param userId ID de l'utilisateur
-     * @return Liste des tâches propres à l'utilisateur
-     */
-    public static List<Task> getUserOwnTasks(int userId) {
-        return TaskDAO.getTasksByUserId(userId);
     }
 }
