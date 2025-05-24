@@ -1,8 +1,10 @@
 package Controller;
 
+import java.util.List;
+
+import Model.CollaborationRequest;
 import Model.User;
 import Model.UserDAO;
-import java.util.List;
 
 public class UserController {
     private static User currentUser = null;
@@ -86,5 +88,28 @@ public class UserController {
 
     public static List<User> searchUsersByUsername(String searchTerm) {
         return UserDAO.searchUsersByUsername(searchTerm);
+    }
+
+    public static boolean sendCollaborationRequest(int senderId, int receiverId) {
+        if (senderId == receiverId) {
+            return false; // Can't send request to self
+        }
+        return UserDAO.sendCollaborationRequest(senderId, receiverId);
+    }
+
+    public static List<CollaborationRequest> getPendingRequests(int userId) {
+        return UserDAO.getPendingRequests(userId);
+    }
+
+    public static List<CollaborationRequest> getSentRequests(int userId) {
+        return UserDAO.getSentRequests(userId);
+    }
+
+    public static boolean respondToRequest(int requestId, String status) {
+        return UserDAO.respondToRequest(requestId, status);
+    }
+
+    public static boolean resendRequest(int requestId) {
+        return UserDAO.resendRequest(requestId);
     }
 }

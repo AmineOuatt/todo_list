@@ -273,4 +273,170 @@ public class UserDAO {
         }
         return null;
     }
+
+    // New methods for collaboration requests
+    
+    public static boolean sendCollaborationRequest(int senderId, int receiverId) {
+        // Check if there's already a pending request
+        if (hasPendingRequest(senderId, receiverId)) {
+            return false;
+        }
+        
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(
+                     "INSERT INTO collaboration_requests (sender_id, receiver_id) VALUES (?, ?)")) {
+            
+            stmt.setInt(1, senderId);
+            stmt.setInt(2, receiverId);
+            return stmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.out.println("Error sending collaboration request: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return false;
+    }
+    
+    public static boolean hasPendingRequest(int senderId, int receiverId) {
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(
+                     "SELECT COUNT(*) FROM collaboration_requests " +
+                     "WHERE ((sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND receiver_id = ?)) " +
+                     "AND status = 'pending'")) {
+            
+            stmt.setInt(1, senderId);
+            stmt.setInt(2, receiverId);
+            stmt.setInt(3, receiverId);
+            stmt.setInt(4, senderId);
+            
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                return rs.getInt(1) > 0;
+            }
+        } catch (SQLException e) {
+            System.out.println("Error checking pending request: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return false;
+    }
+    
+    public static List<CollaborationRequest> getPendingRequests(int userId) {
+        List<CollaborationRequest> requests = new ArrayList<>();
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(
+                     "SELECT cr.*, u.username as sender_name " +
+                     "FROM collaboration_requests cr " +
+                     "JOIN users u ON cr.sender_id = u.user_id " +
+                     "WHERE cr.receiver_id = ? AND cr.status = 'pending'")) {
+            
+            stmt.setInt(1, userId);
+            ResultSet rs = stmt.executeQuery();
+            
+            while (rs.next()) {
+                requests.add(new CollaborationRequest(
+                    rs.getInt("request_id"),
+                    rs.getInt("sender_id"),
+                    rs.getInt("receiver_id"),
+                    rs.getString("sender_name"),
+                    rs.getString("status"),
+                    rs.getTimestamp("created_at")
+                ));
+            }
+        } catch (SQLException e) {
+            System.out.println("Error getting pending requests: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return requests;
+    }
+    
+    public static List<CollaborationRequest> getSentRequests(int userId) {
+        List<CollaborationRequest> requests = new ArrayList<>();
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(
+                     "SELECT cr.*, u.username as receiver_name " +
+                     "FROM collaboration_requests cr " +
+                     "JOIN users u ON cr.receiver_id = u.user_id " +
+                     "WHERE cr.sender_id = ?")) {
+            
+            stmt.setInt(1, userId);
+            ResultSet rs = stmt.executeQuery();
+            
+            while (rs.next()) {
+                requests.add(new CollaborationRequest(
+                    rs.getInt("request_id"),
+                    rs.getInt("sender_id"),
+                    rs.getInt("receiver_id"),
+                    rs.getString("receiver_name"),
+                    rs.getString("status"),
+                    rs.getTimestamp("created_at")
+                ));
+            }
+        } catch (SQLException e) {
+            System.out.println("Error getting sent requests: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return requests;
+    }
+    
+    public static boolean respondToRequest(int requestId, String status) {
+        if (!status.equals("accepted") && !status.equals("declined")) {
+            return false;
+        }
+        
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                // Update request status
+                try (PreparedStatement stmt = conn.prepareStatement(
+                        "UPDATE collaboration_requests SET status = ? WHERE request_id = ?")) {
+                    stmt.setString(1, status);
+                    stmt.setInt(2, requestId);
+                    stmt.executeUpdate();
+                }
+                
+                // If accepted, create collaboration
+                if (status.equals("accepted")) {
+                    try (PreparedStatement stmt = conn.prepareStatement(
+                            "SELECT sender_id, receiver_id FROM collaboration_requests WHERE request_id = ?")) {
+                        stmt.setInt(1, requestId);
+                        ResultSet rs = stmt.executeQuery();
+                        if (rs.next()) {
+                            int senderId = rs.getInt("sender_id");
+                            int receiverId = rs.getInt("receiver_id");
+                            
+                            // Add bidirectional collaboration
+                            addCollaboration(senderId, receiverId);
+                            addCollaboration(receiverId, senderId);
+                        }
+                    }
+                }
+                
+                conn.commit();
+                return true;
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
+            } finally {
+                conn.setAutoCommit(true);
+            }
+        } catch (SQLException e) {
+            System.out.println("Error responding to request: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return false;
+    }
+    
+    public static boolean resendRequest(int requestId) {
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(
+                     "UPDATE collaboration_requests SET status = 'pending', updated_at = CURRENT_TIMESTAMP " +
+                     "WHERE request_id = ? AND status = 'declined'")) {
+            
+            stmt.setInt(1, requestId);
+            return stmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.out.println("Error resending request: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return false;
+    }
 }

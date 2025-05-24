@@ -16,19 +16,17 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.Insets;
+import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.Toolkit;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
-import java.awt.Rectangle;
 
 import javax.swing.BorderFactory;
 import javax.swing.Box;
@@ -380,6 +378,9 @@ public class TaskFrame extends JFrame {
     // Ajouter un champ pour suivre l'instance active du dashboard
     private DashboardView activeDashboardView = null;
     
+    // Add a new field for requests panel
+    private JPanel requestsPanel;
+    
     public TaskFrame(int userId) {
         this.userId = userId;
         
@@ -557,6 +558,11 @@ public class TaskFrame extends JFrame {
         collaborationsPanel = new JPanel(new BorderLayout());
         collaborationsPanel.setBackground(BACKGROUND_COLOR);
         mainContentPanel.add(collaborationsPanel, "COLLABORATIONS");
+        
+        // Create and add requests panel
+        requestsPanel = new JPanel(new BorderLayout());
+        requestsPanel.setBackground(BACKGROUND_COLOR);
+        mainContentPanel.add(requestsPanel, "REQUESTS");
         
         // Add main content panel to frame
         add(mainContentPanel, BorderLayout.CENTER);
@@ -2898,6 +2904,7 @@ public class TaskFrame extends JFrame {
             mainContentPanel.add(notesPanel, "NOTES");
             
             mainContentPanel.add(collaborationsPanel, "COLLABORATIONS");
+            mainContentPanel.add(requestsPanel, "REQUESTS");
         }
         
         // Utiliser CardLayout pour afficher le panneau demandé
@@ -2923,6 +2930,14 @@ public class TaskFrame extends JFrame {
                 collaborationsPanel.add(new CollaborationView(userId));
                 collaborationsPanel.revalidate();
                 collaborationsPanel.repaint();
+            }
+        } else if (name.equals("REQUESTS")) {
+            // Vérifier que requestsPanel est initialisé
+            if (requestsPanel != null) {
+                requestsPanel.removeAll();
+                requestsPanel.add(new RequestsView(userId));
+                requestsPanel.revalidate();
+                requestsPanel.repaint();
             }
         }
     }

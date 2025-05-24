@@ -192,6 +192,21 @@ CREATE TABLE `user_collaborations` (
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `collaboration_requests`
+--
+
+CREATE TABLE `collaboration_requests` (
+  `request_id` int(11) NOT NULL,
+  `sender_id` int(11) NOT NULL,
+  `receiver_id` int(11) NOT NULL,
+  `status` enum('pending','accepted','declined') NOT NULL DEFAULT 'pending',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Indexes for dumped tables
 --
 
@@ -258,6 +273,14 @@ ALTER TABLE `user_collaborations`
   ADD KEY `idx_collaborator_id` (`collaborator_id`);
 
 --
+-- Indexes for table `collaboration_requests`
+--
+ALTER TABLE `collaboration_requests`
+  ADD PRIMARY KEY (`request_id`),
+  ADD KEY `sender_id` (`sender_id`),
+  ADD KEY `receiver_id` (`receiver_id`);
+
+--
 -- AUTO_INCREMENT for dumped tables
 --
 
@@ -310,6 +333,12 @@ ALTER TABLE `user_collaborations`
   MODIFY `collaboration_id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
+-- AUTO_INCREMENT for table `collaboration_requests`
+--
+ALTER TABLE `collaboration_requests`
+  MODIFY `request_id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
 -- Constraints for dumped tables
 --
 
@@ -348,6 +377,13 @@ ALTER TABLE `tasks`
 ALTER TABLE `user_collaborations`
   ADD CONSTRAINT `fk_user_id` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE,
   ADD CONSTRAINT `fk_collaborator_id` FOREIGN KEY (`collaborator_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `collaboration_requests`
+--
+ALTER TABLE `collaboration_requests`
+  ADD CONSTRAINT `fk_request_sender` FOREIGN KEY (`sender_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_request_receiver` FOREIGN KEY (`receiver_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

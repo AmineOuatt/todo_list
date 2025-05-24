@@ -37,6 +37,7 @@ public class SidebarPanel extends JPanel {
     private JButton tasksButton;
     private JButton notesButton;
     private JButton collaborationsButton;
+    private JButton requestsButton;
     private ActionListener actionListener;
     private JButton selectedButton; // Track the currently selected button
 
@@ -61,8 +62,8 @@ public class SidebarPanel extends JPanel {
         add(Box.createVerticalStrut(40));
 
         // Create navigation options with custom icons 
-        String[] navLabels = {"Tasks", "Pomodoro", "Dashboard", "Calendar", "Notes", "Collaborations"};
-        String[] navActions = {"TASKS", "POMODORO", "DASHBOARD", "CALENDAR", "NOTES", "COLLABORATIONS"};
+        String[] navLabels = {"Tasks", "Pomodoro", "Dashboard", "Calendar", "Notes", "Collaborations", "Requests"};
+        String[] navActions = {"TASKS", "POMODORO", "DASHBOARD", "CALENDAR", "NOTES", "COLLABORATIONS", "REQUESTS"};
 
         for (int i = 0; i < navLabels.length; i++) {
             JButton button = new JButton(navLabels[i]);
@@ -89,6 +90,8 @@ public class SidebarPanel extends JPanel {
                 notesButton = button;
             } else if (i == 5) {
                 collaborationsButton = button;
+            } else if (i == 6) {
+                requestsButton = button;
             }
         }
 
@@ -255,5 +258,13 @@ public class SidebarPanel extends JPanel {
      */
     public JButton getCollaborationsButton() {
         return collaborationsButton;
+    }
+
+    /**
+     * Gets the Requests button
+     * @return The Requests button
+     */
+    public JButton getRequestsButton() {
+        return requestsButton;
     }
 } 

@@ -11,11 +11,10 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.GridLayout;
 import java.awt.RenderingHints;
-import java.awt.event.ActionEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -32,6 +31,7 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JProgressBar;
 import javax.swing.JScrollPane;
+import javax.swing.JTabbedPane;
 import javax.swing.JTextField;
 import javax.swing.SwingConstants;
 import javax.swing.border.EmptyBorder;
@@ -42,6 +42,7 @@ import javax.swing.event.DocumentListener;
 import Controller.SubTaskController;
 import Controller.TaskController;
 import Controller.UserController;
+import Model.CollaborationRequest;
 import Model.SubTask;
 import Model.Task;
 import Model.User;
@@ -63,6 +64,8 @@ public class CollaborationView extends JPanel {
     private JTextField searchField;
     private JList<User> searchResults;
     private DefaultListModel<User> searchResultsModel;
+    private JPanel pendingRequestsPanel;
+    private JPanel sentRequestsPanel;
 
     public CollaborationView(int userId) {
         this.currentUserId = userId;
@@ -98,6 +101,7 @@ public class CollaborationView extends JPanel {
         add(mainPanel, BorderLayout.CENTER);
         
         loadCollaborators();
+        loadRequests();
     }
     
     private JPanel createHeaderPanel() {
@@ -128,7 +132,7 @@ public class CollaborationView extends JPanel {
         searchResultsScroll.setVisible(false);
         
         // Add collaborator button
-        JButton addButton = new JButton("Add");
+        JButton addButton = new JButton("Send Request");
         styleButton(addButton, true);
         
         // Panel to contain search field and button
@@ -179,11 +183,11 @@ public class CollaborationView extends JPanel {
             }
         });
         
-        // Add collaborator
+        // Send collaboration request
         addButton.addActionListener(e -> {
             User selectedUser = searchResults.getSelectedValue();
             if (selectedUser != null) {
-                addCollaborator(selectedUser);
+                sendCollaborationRequest(selectedUser);
             } else {
                 JOptionPane.showMessageDialog(this, 
                         "Please select a user.", 
@@ -195,18 +199,19 @@ public class CollaborationView extends JPanel {
         return headerPanel;
     }
     
-    private void addCollaborator(User user) {
-        if (UserController.addCollaboration(currentUserId, user.getUserId())) {
+    private void sendCollaborationRequest(User user) {
+        if (UserController.sendCollaborationRequest(currentUserId, user.getUserId())) {
             JOptionPane.showMessageDialog(this, 
-                    "Collaboration added with " + user.getUsername(), 
+                    "Collaboration request sent to " + user.getUsername(), 
                     "Success", 
                     JOptionPane.INFORMATION_MESSAGE);
             
             searchField.setText("");
             loadCollaborators();
+            loadRequests();
         } else {
             JOptionPane.showMessageDialog(this, 
-                    "Unable to add collaboration with " + user.getUsername(), 
+                    "Unable to send collaboration request to " + user.getUsername(), 
                     "Error", 
                     JOptionPane.ERROR_MESSAGE);
         }
@@ -218,12 +223,69 @@ public class CollaborationView extends JPanel {
         panel.setBackground(BACKGROUND_COLOR);
         panel.setBorder(new EmptyBorder(0, 0, 0, 20));
         
+        // Create tabbed pane for collaborators and requests
+        JTabbedPane tabbedPane = new JTabbedPane();
+        tabbedPane.setBackground(BACKGROUND_COLOR);
+        tabbedPane.setForeground(TEXT_COLOR);
+        
+        // Collaborators tab
+        JPanel collaboratorsTab = new JPanel();
+        collaboratorsTab.setLayout(new BoxLayout(collaboratorsTab, BoxLayout.Y_AXIS));
+        collaboratorsTab.setBackground(BACKGROUND_COLOR);
+        
         JLabel titleLabel = new JLabel("My collaborators");
         titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
         titleLabel.setForeground(TEXT_COLOR);
         titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        panel.add(titleLabel);
-        panel.add(Box.createVerticalStrut(15));
+        collaboratorsTab.add(titleLabel);
+        collaboratorsTab.add(Box.createVerticalStrut(15));
+        
+        collaboratorsPanel = new JPanel();
+        collaboratorsPanel.setLayout(new BoxLayout(collaboratorsPanel, BoxLayout.Y_AXIS));
+        collaboratorsPanel.setBackground(BACKGROUND_COLOR);
+        collaboratorsTab.add(collaboratorsPanel);
+        
+        // Requests tab
+        JPanel requestsTab = new JPanel();
+        requestsTab.setLayout(new BoxLayout(requestsTab, BoxLayout.Y_AXIS));
+        requestsTab.setBackground(BACKGROUND_COLOR);
+        
+        // Pending requests section
+        JLabel pendingTitle = new JLabel("Pending Requests");
+        pendingTitle.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        pendingTitle.setForeground(TEXT_COLOR);
+        pendingTitle.setAlignmentX(Component.LEFT_ALIGNMENT);
+        requestsTab.add(pendingTitle);
+        requestsTab.add(Box.createVerticalStrut(15));
+        
+        JPanel pendingRequestsPanel = new JPanel();
+        pendingRequestsPanel.setLayout(new BoxLayout(pendingRequestsPanel, BoxLayout.Y_AXIS));
+        pendingRequestsPanel.setBackground(BACKGROUND_COLOR);
+        requestsTab.add(pendingRequestsPanel);
+        
+        // Sent requests section
+        requestsTab.add(Box.createVerticalStrut(20));
+        JLabel sentTitle = new JLabel("Sent Requests");
+        sentTitle.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        sentTitle.setForeground(TEXT_COLOR);
+        sentTitle.setAlignmentX(Component.LEFT_ALIGNMENT);
+        requestsTab.add(sentTitle);
+        requestsTab.add(Box.createVerticalStrut(15));
+        
+        JPanel sentRequestsPanel = new JPanel();
+        sentRequestsPanel.setLayout(new BoxLayout(sentRequestsPanel, BoxLayout.Y_AXIS));
+        sentRequestsPanel.setBackground(BACKGROUND_COLOR);
+        requestsTab.add(sentRequestsPanel);
+        
+        // Add tabs
+        tabbedPane.addTab("Collaborators", collaboratorsTab);
+        tabbedPane.addTab("Requests", requestsTab);
+        
+        panel.add(tabbedPane);
+        
+        // Store references to panels
+        this.pendingRequestsPanel = pendingRequestsPanel;
+        this.sentRequestsPanel = sentRequestsPanel;
         
         return panel;
     }
@@ -761,5 +823,184 @@ public class CollaborationView extends JPanel {
         public UserStats(String username) {
             this.username = username;
         }
+    }
+    
+    private void loadRequests() {
+        // Clear panels
+        pendingRequestsPanel.removeAll();
+        sentRequestsPanel.removeAll();
+        
+        // Load pending requests
+        List<CollaborationRequest> pendingRequests = UserController.getPendingRequests(currentUserId);
+        if (pendingRequests.isEmpty()) {
+            JLabel emptyLabel = new JLabel("No pending requests.");
+            emptyLabel.setFont(new Font("Segoe UI", Font.ITALIC, 14));
+            emptyLabel.setForeground(new Color(128, 128, 128));
+            emptyLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+            pendingRequestsPanel.add(emptyLabel);
+        } else {
+            for (CollaborationRequest request : pendingRequests) {
+                JPanel requestCard = createRequestCard(request);
+                requestCard.setAlignmentX(Component.LEFT_ALIGNMENT);
+                pendingRequestsPanel.add(requestCard);
+                pendingRequestsPanel.add(Box.createVerticalStrut(10));
+            }
+        }
+        
+        // Load sent requests
+        List<CollaborationRequest> sentRequests = UserController.getSentRequests(currentUserId);
+        if (sentRequests.isEmpty()) {
+            JLabel emptyLabel = new JLabel("No sent requests.");
+            emptyLabel.setFont(new Font("Segoe UI", Font.ITALIC, 14));
+            emptyLabel.setForeground(new Color(128, 128, 128));
+            emptyLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+            sentRequestsPanel.add(emptyLabel);
+        } else {
+            for (CollaborationRequest request : sentRequests) {
+                JPanel requestCard = createSentRequestCard(request);
+                requestCard.setAlignmentX(Component.LEFT_ALIGNMENT);
+                sentRequestsPanel.add(requestCard);
+                sentRequestsPanel.add(Box.createVerticalStrut(10));
+            }
+        }
+        
+        pendingRequestsPanel.revalidate();
+        pendingRequestsPanel.repaint();
+        sentRequestsPanel.revalidate();
+        sentRequestsPanel.repaint();
+    }
+    
+    private JPanel createRequestCard(CollaborationRequest request) {
+        JPanel card = new JPanel(new BorderLayout(10, 0));
+        card.setBackground(CARD_COLOR);
+        card.setBorder(BorderFactory.createCompoundBorder(
+                new LineBorder(BORDER_COLOR),
+                new EmptyBorder(10, 15, 10, 15)));
+        
+        // User info
+        JPanel infoPanel = new JPanel();
+        infoPanel.setLayout(new BoxLayout(infoPanel, BoxLayout.Y_AXIS));
+        infoPanel.setBackground(CARD_COLOR);
+        
+        JLabel nameLabel = new JLabel(request.getOtherUserName());
+        nameLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        nameLabel.setForeground(TEXT_COLOR);
+        
+        JLabel dateLabel = new JLabel("Sent " + formatDate(request.getCreatedAt()));
+        dateLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        dateLabel.setForeground(new Color(128, 128, 128));
+        
+        infoPanel.add(nameLabel);
+        infoPanel.add(Box.createVerticalStrut(5));
+        infoPanel.add(dateLabel);
+        
+        // Buttons
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 5, 0));
+        buttonPanel.setBackground(CARD_COLOR);
+        
+        JButton acceptButton = new JButton("Accept");
+        styleButton(acceptButton, true);
+        acceptButton.addActionListener(e -> respondToRequest(request, "accepted"));
+        
+        JButton declineButton = new JButton("Decline");
+        styleButton(declineButton, false);
+        declineButton.addActionListener(e -> respondToRequest(request, "declined"));
+        
+        buttonPanel.add(acceptButton);
+        buttonPanel.add(declineButton);
+        
+        card.add(infoPanel, BorderLayout.CENTER);
+        card.add(buttonPanel, BorderLayout.EAST);
+        
+        return card;
+    }
+    
+    private JPanel createSentRequestCard(CollaborationRequest request) {
+        JPanel card = new JPanel(new BorderLayout(10, 0));
+        card.setBackground(CARD_COLOR);
+        card.setBorder(BorderFactory.createCompoundBorder(
+                new LineBorder(BORDER_COLOR),
+                new EmptyBorder(10, 15, 10, 15)));
+        
+        // User info
+        JPanel infoPanel = new JPanel();
+        infoPanel.setLayout(new BoxLayout(infoPanel, BoxLayout.Y_AXIS));
+        infoPanel.setBackground(CARD_COLOR);
+        
+        JLabel nameLabel = new JLabel(request.getOtherUserName());
+        nameLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        nameLabel.setForeground(TEXT_COLOR);
+        
+        JLabel statusLabel = new JLabel("Status: " + request.getStatus());
+        statusLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        statusLabel.setForeground(getStatusColor(request.getStatus()));
+        
+        JLabel dateLabel = new JLabel("Sent " + formatDate(request.getCreatedAt()));
+        dateLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        dateLabel.setForeground(new Color(128, 128, 128));
+        
+        infoPanel.add(nameLabel);
+        infoPanel.add(Box.createVerticalStrut(5));
+        infoPanel.add(statusLabel);
+        infoPanel.add(Box.createVerticalStrut(5));
+        infoPanel.add(dateLabel);
+        
+        // Resend button (only for declined requests)
+        if (request.isDeclined()) {
+            JButton resendButton = new JButton("Resend");
+            styleButton(resendButton, true);
+            resendButton.addActionListener(e -> resendRequest(request));
+            
+            JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+            buttonPanel.setBackground(CARD_COLOR);
+            buttonPanel.add(resendButton);
+            
+            card.add(buttonPanel, BorderLayout.EAST);
+        }
+        
+        card.add(infoPanel, BorderLayout.CENTER);
+        
+        return card;
+    }
+    
+    private void respondToRequest(CollaborationRequest request, String status) {
+        if (UserController.respondToRequest(request.getRequestId(), status)) {
+            loadCollaborators();
+            loadRequests();
+        } else {
+            JOptionPane.showMessageDialog(this,
+                    "Unable to " + status + " the request.",
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE);
+        }
+    }
+    
+    private void resendRequest(CollaborationRequest request) {
+        if (UserController.resendRequest(request.getRequestId())) {
+            loadRequests();
+        } else {
+            JOptionPane.showMessageDialog(this,
+                    "Unable to resend the request.",
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE);
+        }
+    }
+    
+    private Color getStatusColor(String status) {
+        switch (status.toLowerCase()) {
+            case "accepted":
+                return COMPLETED_COLOR;
+            case "pending":
+                return PENDING_COLOR;
+            case "declined":
+                return new Color(255, 59, 48);
+            default:
+                return TEXT_COLOR;
+        }
+    }
+    
+    private String formatDate(Timestamp timestamp) {
+        SimpleDateFormat sdf = new SimpleDateFormat("MMM d, yyyy");
+        return sdf.format(timestamp);
     }
 } 
