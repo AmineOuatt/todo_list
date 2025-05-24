@@ -77,14 +77,14 @@ public class RequestsView extends JPanel {
         headerPanel.add(titleLabel, BorderLayout.WEST);
         
         // Search and refresh panel
-        JPanel searchPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        searchPanel.setBackground(BACKGROUND_COLOR);
+        JPanel controlPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        controlPanel.setBackground(BACKGROUND_COLOR);
         
         // Refresh button
         JButton refreshButton = new JButton("Refresh");
         styleButton(refreshButton, true);
         refreshButton.addActionListener(e -> loadRequests());
-        searchPanel.add(refreshButton);
+        controlPanel.add(refreshButton);
         
         // Search field
         searchField = new JTextField(20);
@@ -93,9 +93,14 @@ public class RequestsView extends JPanel {
         searchField.setBorder(BorderFactory.createCompoundBorder(
                 new LineBorder(BORDER_COLOR),
                 new EmptyBorder(5, 10, 5, 10)));
-        searchPanel.add(searchField);
+        searchField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+            public void changedUpdate(javax.swing.event.DocumentEvent e) { filterRequests(); }
+            public void removeUpdate(javax.swing.event.DocumentEvent e) { filterRequests(); }
+            public void insertUpdate(javax.swing.event.DocumentEvent e) { filterRequests(); }
+        });
+        controlPanel.add(searchField);
         
-        headerPanel.add(searchPanel, BorderLayout.EAST);
+        headerPanel.add(controlPanel, BorderLayout.EAST);
         
         return headerPanel;
     }
@@ -151,6 +156,7 @@ public class RequestsView extends JPanel {
         card.setBorder(BorderFactory.createCompoundBorder(
                 new LineBorder(BORDER_COLOR),
                 new EmptyBorder(10, 15, 10, 15)));
+        card.setPreferredSize(new Dimension(800, 80)); // Set fixed height like note list
         
         // User info
         JPanel infoPanel = new JPanel();

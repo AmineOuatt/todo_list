@@ -22,6 +22,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextField;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
+import javax.swing.JOptionPane;
 
 import Controller.UserController;
 import Model.CollaborationRequest;
@@ -196,6 +197,7 @@ public class RequestStatusView extends JPanel {
         card.setBorder(BorderFactory.createCompoundBorder(
                 new LineBorder(BORDER_COLOR),
                 new EmptyBorder(10, 15, 10, 15)));
+        card.setPreferredSize(new Dimension(800, 80)); // Set fixed height like note list
         
         // Request info
         JPanel infoPanel = new JPanel();
@@ -238,7 +240,31 @@ public class RequestStatusView extends JPanel {
         
         card.add(infoPanel, BorderLayout.CENTER);
         
+        // Add remove button for declined requests
+        if (request.isDeclined()) {
+            JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+            buttonPanel.setBackground(CARD_COLOR);
+            
+            JButton removeButton = new JButton("Remove");
+            styleButton(removeButton, false);
+            removeButton.addActionListener(e -> removeRequest(request));
+            buttonPanel.add(removeButton);
+            
+            card.add(buttonPanel, BorderLayout.EAST);
+        }
+        
         return card;
+    }
+    
+    private void removeRequest(CollaborationRequest request) {
+        if (UserController.removeRequest(request.getRequestId())) {
+            loadRequests(); // Reload the requests after removal
+        } else {
+            JOptionPane.showMessageDialog(this,
+                    "Unable to remove the request.",
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE);
+        }
     }
     
     private Color getStatusColor(String status) {

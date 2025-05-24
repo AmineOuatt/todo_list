@@ -494,4 +494,18 @@ public class UserDAO {
         }
         return requests;
     }
+
+    public static boolean removeRequest(int requestId) {
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(
+                     "DELETE FROM collaboration_requests WHERE request_id = ? AND status = 'declined'")) {
+            
+            stmt.setInt(1, requestId);
+            return stmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.out.println("Error removing request: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return false;
+    }
 }

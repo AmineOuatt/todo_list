@@ -127,4 +127,8 @@ public class UserController {
         
         return allRequests;
     }
+
+    public static boolean removeRequest(int requestId) {
+        return UserDAO.removeRequest(requestId);
+    }
 }
