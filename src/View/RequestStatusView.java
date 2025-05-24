@@ -71,11 +71,23 @@ public class RequestStatusView extends JPanel {
         JPanel headerPanel = new JPanel(new BorderLayout());
         headerPanel.setBackground(BACKGROUND_COLOR);
         
-        // Title
+        // Title and count panel
+        JPanel titlePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        titlePanel.setBackground(BACKGROUND_COLOR);
+        
         JLabel titleLabel = new JLabel("Request Status");
         titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 24));
         titleLabel.setForeground(TEXT_COLOR);
-        headerPanel.add(titleLabel, BorderLayout.WEST);
+        
+        JLabel countLabel = new JLabel("0 requests");
+        countLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        countLabel.setForeground(new Color(128, 128, 128));
+        countLabel.setBorder(new EmptyBorder(0, 10, 0, 0));
+        
+        titlePanel.add(titleLabel);
+        titlePanel.add(countLabel);
+        
+        headerPanel.add(titlePanel, BorderLayout.WEST);
         
         // Search, filter and refresh panel
         JPanel controlPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
@@ -101,6 +113,11 @@ public class RequestStatusView extends JPanel {
         searchField.setBorder(BorderFactory.createCompoundBorder(
                 new LineBorder(BORDER_COLOR),
                 new EmptyBorder(5, 10, 5, 10)));
+        searchField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+            public void changedUpdate(javax.swing.event.DocumentEvent e) { filterRequests(); }
+            public void removeUpdate(javax.swing.event.DocumentEvent e) { filterRequests(); }
+            public void insertUpdate(javax.swing.event.DocumentEvent e) { filterRequests(); }
+        });
         controlPanel.add(searchField);
         
         headerPanel.add(controlPanel, BorderLayout.EAST);
@@ -146,7 +163,9 @@ public class RequestStatusView extends JPanel {
         
         // Update count label
         JLabel countLabel = (JLabel) ((JPanel) ((JPanel) getComponent(0)).getComponent(0)).getComponent(1);
-        if (filteredRequests.size() == allRequests.size()) {
+        if (filteredRequests.isEmpty()) {
+            countLabel.setText("No requests found");
+        } else if (filteredRequests.size() == allRequests.size()) {
             countLabel.setText(allRequests.size() + " requests");
         } else {
             countLabel.setText(filteredRequests.size() + " of " + allRequests.size() + " requests");
@@ -183,23 +202,39 @@ public class RequestStatusView extends JPanel {
         infoPanel.setLayout(new BoxLayout(infoPanel, BoxLayout.Y_AXIS));
         infoPanel.setBackground(CARD_COLOR);
         
+        // Direction and name
+        JPanel namePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        namePanel.setBackground(CARD_COLOR);
+        
+        JLabel directionLabel = new JLabel(request.getSenderId() == currentUserId ? "Sent to: " : "Received from: ");
+        directionLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        directionLabel.setForeground(new Color(128, 128, 128));
+        
         JLabel nameLabel = new JLabel(request.getOtherUserName());
         nameLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
         nameLabel.setForeground(TEXT_COLOR);
+        
+        namePanel.add(directionLabel);
+        namePanel.add(nameLabel);
+        
+        // Status and date
+        JPanel statusPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        statusPanel.setBackground(CARD_COLOR);
         
         JLabel statusLabel = new JLabel("Status: " + request.getStatus());
         statusLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         statusLabel.setForeground(getStatusColor(request.getStatus()));
         
-        JLabel dateLabel = new JLabel("Sent " + formatDate(request.getCreatedAt()));
+        JLabel dateLabel = new JLabel(" • Sent " + formatDate(request.getCreatedAt()));
         dateLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         dateLabel.setForeground(new Color(128, 128, 128));
         
-        infoPanel.add(nameLabel);
+        statusPanel.add(statusLabel);
+        statusPanel.add(dateLabel);
+        
+        infoPanel.add(namePanel);
         infoPanel.add(Box.createVerticalStrut(5));
-        infoPanel.add(statusLabel);
-        infoPanel.add(Box.createVerticalStrut(5));
-        infoPanel.add(dateLabel);
+        infoPanel.add(statusPanel);
         
         card.add(infoPanel, BorderLayout.CENTER);
         

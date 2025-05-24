@@ -121,8 +121,8 @@ public class UserController {
         List<CollaborationRequest> sentRequests = UserDAO.getSentRequests(userId);
         allRequests.addAll(sentRequests);
         
-        // Get received requests
-        List<CollaborationRequest> receivedRequests = UserDAO.getPendingRequests(userId);
+        // Get all received requests (not just pending ones)
+        List<CollaborationRequest> receivedRequests = UserDAO.getReceivedRequests(userId);
         allRequests.addAll(receivedRequests);
         
         return allRequests;

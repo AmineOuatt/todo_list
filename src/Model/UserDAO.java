@@ -465,4 +465,33 @@ public class UserDAO {
         }
         return false;
     }
+
+    public static List<CollaborationRequest> getReceivedRequests(int userId) {
+        List<CollaborationRequest> requests = new ArrayList<>();
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(
+                     "SELECT cr.*, u.username as sender_name " +
+                     "FROM collaboration_requests cr " +
+                     "JOIN users u ON cr.sender_id = u.user_id " +
+                     "WHERE cr.receiver_id = ?")) {
+            
+            stmt.setInt(1, userId);
+            ResultSet rs = stmt.executeQuery();
+            
+            while (rs.next()) {
+                requests.add(new CollaborationRequest(
+                    rs.getInt("request_id"),
+                    rs.getInt("sender_id"),
+                    rs.getInt("receiver_id"),
+                    rs.getString("sender_name"),
+                    rs.getString("status"),
+                    rs.getTimestamp("created_at")
+                ));
+            }
+        } catch (SQLException e) {
+            System.out.println("Error getting received requests: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return requests;
+    }
 }
