@@ -1,5 +1,6 @@
 package Controller;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import Model.CollaborationRequest;
@@ -111,5 +112,19 @@ public class UserController {
 
     public static boolean resendRequest(int requestId) {
         return UserDAO.resendRequest(requestId);
+    }
+
+    public static List<CollaborationRequest> getAllRequests(int userId) {
+        List<CollaborationRequest> allRequests = new ArrayList<>();
+        
+        // Get sent requests
+        List<CollaborationRequest> sentRequests = UserDAO.getSentRequests(userId);
+        allRequests.addAll(sentRequests);
+        
+        // Get received requests
+        List<CollaborationRequest> receivedRequests = UserDAO.getPendingRequests(userId);
+        allRequests.addAll(receivedRequests);
+        
+        return allRequests;
     }
 }

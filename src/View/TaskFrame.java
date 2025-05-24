@@ -380,6 +380,7 @@ public class TaskFrame extends JFrame {
     
     // Add a new field for requests panel
     private JPanel requestsPanel;
+    private JPanel requestStatusPanel;
     
     public TaskFrame(int userId) {
         this.userId = userId;
@@ -563,6 +564,11 @@ public class TaskFrame extends JFrame {
         requestsPanel = new JPanel(new BorderLayout());
         requestsPanel.setBackground(BACKGROUND_COLOR);
         mainContentPanel.add(requestsPanel, "REQUESTS");
+        
+        // Create and add request status panel
+        requestStatusPanel = new JPanel(new BorderLayout());
+        requestStatusPanel.setBackground(BACKGROUND_COLOR);
+        mainContentPanel.add(requestStatusPanel, "REQUEST_STATUS");
         
         // Add main content panel to frame
         add(mainContentPanel, BorderLayout.CENTER);
@@ -2938,6 +2944,14 @@ public class TaskFrame extends JFrame {
                 requestsPanel.add(new RequestsView(userId));
                 requestsPanel.revalidate();
                 requestsPanel.repaint();
+            }
+        } else if (name.equals("REQUEST_STATUS")) {
+            // Vérifier que requestStatusPanel est initialisé
+            if (requestStatusPanel != null) {
+                requestStatusPanel.removeAll();
+                requestStatusPanel.add(new RequestStatusView(userId));
+                requestStatusPanel.revalidate();
+                requestStatusPanel.repaint();
             }
         }
     }
